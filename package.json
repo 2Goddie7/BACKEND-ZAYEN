@@ -1,0 +1,20 @@
+{
+  "name": "backend-zayen",
+  "version": "1.0.0",
+  "description": "Tesis Zayen Backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2Goddie7/BACKEND-ZAYEN.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/2Goddie7/BACKEND-ZAYEN/issues"
+  },
+  "homepage": "https://github.com/2Goddie7/BACKEND-ZAYEN#readme"
+}
