@@ -17,13 +17,23 @@ const pasanteSchema = new Schema({
         required: true,
         trim: true
     },
+    horasDePasantia: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    rol: {
+        type: String,
+        default: 'pasante'
+    },
     celular: {
         type: String,
         required: true,
         trim: true
     },
-    fotoPerfil:{
-        type:String
+    fotoPerfil: {
+        type: String,
+        default: null
     },
     token: {
         type: String,
@@ -37,13 +47,14 @@ const pasanteSchema = new Schema({
         type: Boolean,
         default: true
     },
-    microsoftId: {
-    type: String
-  }
+    googleId: {
+        type: String,
+        default: null
+    }
 }, {
-  timestamps: true
+    timestamps: true,
+    collection: 'pasante'
 });
-
 
 // Método para generar token
 pasanteSchema.methods.crearToken = function () {

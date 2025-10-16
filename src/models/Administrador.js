@@ -22,6 +22,27 @@ const administradorSchema = new Schema({
     enum: ['administrador', 'admini'],
     default: 'administrador'
   },
+  tipo: {
+    type: String,
+    enum: ['estudiante', 'administrativo'],
+    required: function() {
+      return this.rol === 'admini';
+    }
+  },
+  facultad: {
+    type: String,
+    trim: true,
+    required: function() {
+      return this.rol === 'admini' && this.tipo === 'estudiante';
+    }
+  },
+  horasDePasantia: {
+    type: Number,
+    default: 0,
+    required: function() {
+      return this.rol === 'admini' && this.tipo === 'estudiante';
+    }
+  },
   celular: {
     type: String,
     required: true,

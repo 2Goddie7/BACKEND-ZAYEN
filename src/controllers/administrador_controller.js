@@ -1,65 +1,202 @@
 import Administrador from "../models/Administrador.js";
 import Pasante from "../models/Pasante.js";
 import { sendMailToRegister, sendMailToRecoveryPassword } from "../config/nodemailer.js";
-import jwt from "jsonwebtoken";
+import { generarToken } from "../middleware/jwt.js";
 import crypto from "crypto";
 
-// Login administrador - listo
+// ==================== AUTENTICACIÓN ====================
+
+// Login administrador
 const loginAdministrador = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password)
+    if (!email || !password) {
       return res.status(400).json({ msg: "Todos los campos son obligatorios" });
-
-    const admin = await Administrador.findOne({ email });
-    if (!admin)
-      return res.status(404).json({ msg: "El correo no está registrado" });
-
-    if (!admin.confirmEmail) {
-      return res.status(403).json({ msg: "Debes confirmar tu cuenta por correo antes de iniciar sesión" });
     }
 
+    const admin = await Administrador.findOne({ email });
+    if (!admin) {
+      return res.status(404).json({ msg: "El correo no está registrado" });
+    }
+
+    if (!admin.confirmEmail) {
+      return res.status(403).json({ 
+        msg: "Debes confirmar tu cuenta por correo antes de iniciar sesión" 
+      });
+    }
+
+    if (!admin.status) {
+      return res.status(403).json({ msg: "Tu cuenta está inactiva" });
+    }
 
     const rolesPermitidos = ["administrador", "admini"];
-
     if (!rolesPermitidos.includes(admin.rol)) {
       return res.status(403).json({ msg: "No tienes permisos de administrador" });
     }
 
-
     const passwordValida = await admin.matchPassword(password);
-    if (!passwordValida)
+    if (!passwordValida) {
       return res.status(401).json({ msg: "Contraseña incorrecta" });
+    }
 
-    const token = jwt.sign(
-      { id: admin._id, rol: admin.rol },
-      process.env.JWT_SECRET || "secreto",
-      { expiresIn: "1d" }
-    );
+    const token = generarToken(admin._id, admin.rol);
 
-    res.status(200).json({
-      msg: "Bienvenido administrador",
+    const respuesta = {
+      msg: "Inicio de sesión exitoso",
       token,
       admin: {
         id: admin._id,
         nombre: admin.nombre,
         email: admin.email,
         rol: admin.rol,
-      },
-    });
+        celular: admin.celular,
+        fotoPerfil: admin.fotoPerfil
+      }
+    };
+
+    // Si es admini, agregar campos adicionales
+    if (admin.rol === "admini") {
+      respuesta.admin.tipo = admin.tipo;
+      if (admin.tipo === "estudiante") {
+        respuesta.admin.facultad = admin.facultad;
+        respuesta.admin.horasDePasantia = admin.horasDePasantia;
+      }
+    }
+
+    res.status(200).json(respuesta);
   } catch (error) {
     res.status(500).json({ msg: "Error al iniciar sesión", error: error.message });
   }
 };
 
-// Cambiar contraseña administrador - listo
+// Confirmar cuenta admini
+const confirmarCuentaAdmini = async (req, res) => {
+  const { token } = req.params;
+
+  try {
+    const admin = await Administrador.findOne({ token });
+
+    if (!admin) {
+      return res.status(400).json({ msg: "Token inválido o cuenta ya confirmada" });
+    }
+
+    admin.confirmEmail = true;
+    admin.token = null;
+    await admin.save();
+
+    res.status(200).json({ msg: "Cuenta confirmada correctamente. Ya puedes iniciar sesión" });
+  } catch (error) {
+    res.status(500).json({ msg: "Error al confirmar la cuenta", error: error.message });
+  }
+};
+
+// ==================== PERFIL ====================
+
+// Obtener perfil del administrador actual
+const obtenerPerfilAdministrador = async (req, res) => {
+  try {
+    const admin = req.user;
+
+    if (!admin) {
+      return res.status(404).json({ msg: "Administrador no encontrado" });
+    }
+
+    const perfil = {
+      id: admin._id,
+      nombre: admin.nombre,
+      email: admin.email,
+      rol: admin.rol,
+      celular: admin.celular,
+      fotoPerfil: admin.fotoPerfil
+    };
+
+    // Si es admini de tipo estudiante, agregar campos adicionales
+    if (admin.rol === "admini") {
+      perfil.tipo = admin.tipo;
+      if (admin.tipo === "estudiante") {
+        perfil.facultad = admin.facultad;
+        perfil.horasDePasantia = admin.horasDePasantia;
+      }
+    }
+
+    res.status(200).json(perfil);
+  } catch (error) {
+    res.status(500).json({ msg: "Error al obtener perfil", error: error.message });
+  }
+};
+
+// Actualizar perfil (celular y foto)
+const actualizarPerfilAdministrador = async (req, res) => {
+  try {
+    const admin = req.user;
+    const { celular } = req.body;
+
+    if (celular) {
+      admin.celular = celular;
+    }
+
+    await admin.save();
+
+    res.status(200).json({ 
+      msg: "Perfil actualizado correctamente",
+      admin: {
+        id: admin._id,
+        nombre: admin.nombre,
+        email: admin.email,
+        celular: admin.celular,
+        fotoPerfil: admin.fotoPerfil
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ msg: "Error al actualizar perfil", error: error.message });
+  }
+};
+
+// Actualizar foto de perfil
+const actualizarFotoPerfilAdministrador = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const admin = await Administrador.findById(id);
+    
+    if (!admin) {
+      return res.status(404).json({ msg: "Administrador no encontrado" });
+    }
+
+    // Verificar que solo puede editar su propia foto o que sea administrador principal
+    if (req.user._id.toString() !== id && req.user.rol !== 'administrador') {
+      return res.status(403).json({ msg: "No tienes permiso para actualizar esta foto" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ msg: "No se subió ninguna imagen" });
+    }
+
+    admin.fotoPerfil = req.file.path;
+    await admin.save();
+
+    res.status(200).json({ 
+      msg: "Foto de perfil actualizada correctamente", 
+      fotoPerfil: admin.fotoPerfil 
+    });
+  } catch (error) {
+    res.status(500).json({ msg: "Error al actualizar foto", error: error.message });
+  }
+};
+
+// ==================== CONTRASEÑAS ====================
+
+// Cambiar contraseña (estando autenticado)
 const cambiarPasswordAdministrador = async (req, res) => {
   try {
     const { actualPassword, nuevaPassword } = req.body;
 
     if (!actualPassword || !nuevaPassword) {
       return res.status(400).json({ msg: "Todos los campos son obligatorios" });
+    }
+
+    if (nuevaPassword.length < 8) {
+      return res.status(400).json({ msg: "La nueva contraseña debe tener al menos 8 caracteres" });
     }
 
     const admin = req.user;
@@ -74,60 +211,19 @@ const cambiarPasswordAdministrador = async (req, res) => {
 
     res.status(200).json({ msg: "Contraseña actualizada correctamente" });
   } catch (error) {
-    res.status(500).json({
-      msg: "Error al cambiar la contraseña",
-      error: error.message
-    });
+    res.status(500).json({ msg: "Error al cambiar la contraseña", error: error.message });
   }
 };
 
-// listo
-const obtenerPerfilAdministrador = async (req, res) => {
-  try {
-    const admin = req.user;
-
-    if (!admin) {
-      return res.status(404).json({ msg: "Administrador no encontrado" });
-    }
-
-    const { _id, nombre, email, rol } = admin;
-    res.status(200).json({ _id, nombre, email, rol });
-
-  } catch (error) {
-    res.status(500).json({ msg: "Error al obtener perfil de administrador" });
-  }
-};
-
-//cambiarfotoperfilñ
-export const actualizarFotoPerfilAdministrador = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const admin = await Administrador.findById(id);
-    if (!admin) return res.status(404).json({ msg: "Administrador no encontrado" });
-
-    if (req.user._id.toString() !== id && req.user.rol !== 'administrador') {
-      return res.status(403).json({ msg: "No tienes permiso para actualizar esta foto" });
-    }
-
-    if (!req.file) return res.status(400).json({ msg: "No se subió ninguna imagen" });
-
-    const file = req.file;
-    admin.fotoPerfil = file.path || file.filename || file.secure_url || null;
-
-    await admin.save();
-    res.status(200).json({ msg: "Foto de perfil actualizada", admin: { id: admin._id, nombre: admin.nombre, email: admin.email, fotoPerfil: admin.fotoPerfil } });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Error al actualizar foto", error: error.message });
-  }
-};
-
-
-//listo
+// Solicitar recuperación de contraseña
 const solicitarRecuperacionPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
+    if (!email) {
+      return res.status(400).json({ msg: "El email es requerido" });
+    }
+
     const admin = await Administrador.findOne({ email });
     if (!admin) {
       return res.status(404).json({ msg: "Correo no encontrado" });
@@ -145,26 +241,37 @@ const solicitarRecuperacionPassword = async (req, res) => {
   }
 };
 
+// Validar token de recuperación
 const validarTokenRecuperacion = async (req, res) => {
   const { token } = req.params;
+  
   try {
     const admin = await Administrador.findOne({ token });
+    
     if (!admin) {
       return res.status(404).json({ msg: "Token inválido o expirado" });
     }
-    return res.json({ msg: "Token válido" });
+    
+    res.status(200).json({ msg: "Token válido" });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ msg: "Error del servidor", error: error.message });
+    res.status(500).json({ msg: "Error del servidor", error: error.message });
   }
 };
 
-//listo
+// Recuperar contraseña (con token)
 const recuperarPassword = async (req, res) => {
   const { token } = req.params;
   const { nuevaPassword } = req.body;
 
   try {
+    if (!nuevaPassword) {
+      return res.status(400).json({ msg: "La nueva contraseña es requerida" });
+    }
+
+    if (nuevaPassword.length < 8) {
+      return res.status(400).json({ msg: "La contraseña debe tener al menos 8 caracteres" });
+    }
+
     const admin = await Administrador.findOne({ token });
     if (!admin) {
       return res.status(404).json({ msg: "Token no válido o expirado" });
@@ -180,71 +287,176 @@ const recuperarPassword = async (req, res) => {
   }
 };
 
+// ==================== CRUD ADMINIS ====================
 
-//Crear admini (rango menor) - listo
+// Crear admini (solo administrador principal)
 const crearAdmin = async (req, res) => {
-  if (req.user.rol !== "administrador") {
-    return res.status(403).json({ msg: "No tienes permiso para esta acción" });
-  }
-
-  // Extraer datos del body
-  const { nombre, email, password, celular, rol } = req.body;
-
-  // Verificar si el email ya existe
-  const emailExiste = await Administrador.findOne({ email });
-  if (emailExiste) {
-    return res.status(400).json({ msg: "El correo ya está registrado" });
-  }
-
-  // Crear nuevo administrador
-  const nuevoAdmin = new Administrador({
-    nombre,
-    email,
-    password: await Administrador.prototype.encrypPassword(password),
-    celular,
-    rol: rol || "admini"
-  });
-
-  nuevoAdmin.token = nuevoAdmin.crearToken();
-
-  await nuevoAdmin.save();
-  sendMailToRegister(nuevoAdmin.email, nuevoAdmin.token);
-  res.status(201).json({
-  msg: "Registro exitoso, ahora se debe verificar el correo",
-  email,
-  admin: {
-    id: nuevoAdmin._id,
-    nombre: nuevoAdmin.nombre,
-    email: nuevoAdmin.email,
-    rol: nuevoAdmin.rol,
-    celular: nuevoAdmin.celular
-  }
-});
-};
-
-//Verifricar correo - listo
-const confirmarCuentaAdmini = async (req, res) => {
-  const { token } = req.params;
-
   try {
-    const admin = await Administrador.findOne({ token });
-
-
-    if (!admin) {
-      return res.status(400).json({ msg: "Token inválido o cuenta ya confirmada" });
+    if (req.user.rol !== "administrador") {
+      return res.status(403).json({ msg: "No tienes permiso para esta acción" });
     }
 
-    admin.confirmEmail = true;
-    admin.tokenVerificacion = null;
-    await admin.save();
+    const { nombre, email, password, celular, tipo, facultad, horasDePasantia } = req.body;
 
-    res.status(200).json({ msg: "Cuenta confirmada correctamente" });
+    // Validaciones
+    if (!nombre || !email || !password || !celular || !tipo) {
+      return res.status(400).json({ msg: "Todos los campos obligatorios deben ser completados" });
+    }
+
+    // Si es tipo estudiante, validar campos adicionales
+    if (tipo === "estudiante") {
+      if (!facultad || horasDePasantia === undefined) {
+        return res.status(400).json({ 
+          msg: "Para adminis de tipo estudiante, facultad y horasDePasantia son obligatorios" 
+        });
+      }
+    }
+
+    // Verificar si el email ya existe
+    const emailExiste = await Administrador.findOne({ email });
+    if (emailExiste) {
+      return res.status(400).json({ msg: "El correo ya está registrado" });
+    }
+
+    // Crear nuevo admini
+    const nuevoAdmin = new Administrador({
+      nombre,
+      email,
+      password: await Administrador.prototype.encrypPassword(password),
+      celular,
+      tipo,
+      rol: "admini"
+    });
+
+    // Agregar campos condicionales
+    if (tipo === "estudiante") {
+      nuevoAdmin.facultad = facultad;
+      nuevoAdmin.horasDePasantia = horasDePasantia || 0;
+    }
+
+    nuevoAdmin.token = nuevoAdmin.crearToken();
+    await nuevoAdmin.save();
+
+    sendMailToRegister(nuevoAdmin.email, nuevoAdmin.token);
+
+    const respuesta = {
+      msg: "Admini creado exitosamente. Se ha enviado un correo de confirmación",
+      admin: {
+        id: nuevoAdmin._id,
+        nombre: nuevoAdmin.nombre,
+        email: nuevoAdmin.email,
+        rol: nuevoAdmin.rol,
+        tipo: nuevoAdmin.tipo,
+        celular: nuevoAdmin.celular
+      }
+    };
+
+    if (tipo === "estudiante") {
+      respuesta.admin.facultad = nuevoAdmin.facultad;
+      respuesta.admin.horasDePasantia = nuevoAdmin.horasDePasantia;
+    }
+
+    res.status(201).json(respuesta);
   } catch (error) {
-    res.status(500).json({ msg: "Error al confirmar la cuenta" });
+    res.status(500).json({ msg: "Error al crear admini", error: error.message });
   }
 };
 
-//Elimianr admini - listo
+// Listar todos los adminis
+const listarAdminis = async (req, res) => {
+  try {
+    if (req.user.rol !== "administrador") {
+      return res.status(403).json({ msg: "No tienes permiso para ver esta información" });
+    }
+
+    const adminis = await Administrador.find({ rol: "admini" })
+      .select("nombre email tipo facultad horasDePasantia celular fotoPerfil status createdAt")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(adminis);
+  } catch (error) {
+    res.status(500).json({ msg: "Error al obtener los adminis", error: error.message });
+  }
+};
+
+// Obtener admini por ID
+const obtenerAdminiPorId = async (req, res) => {
+  try {
+    if (req.user.rol !== "administrador") {
+      return res.status(403).json({ msg: "No tienes permiso para ver esta información" });
+    }
+
+    const { id } = req.params;
+    const admini = await Administrador.findById(id).select("-password -token");
+
+    if (!admini) {
+      return res.status(404).json({ msg: "Admini no encontrado" });
+    }
+
+    if (admini.rol !== "admini") {
+      return res.status(400).json({ msg: "Este usuario no es un admini" });
+    }
+
+    res.status(200).json(admini);
+  } catch (error) {
+    res.status(500).json({ msg: "Error al obtener admini", error: error.message });
+  }
+};
+
+// Editar admini
+const editarAdmini = async (req, res) => {
+  try {
+    if (req.user.rol !== "administrador") {
+      return res.status(403).json({ msg: "No tienes permiso para esta acción" });
+    }
+
+    const { id } = req.params;
+    const { celular, facultad, horasDePasantia } = req.body;
+
+    const admini = await Administrador.findById(id);
+    if (!admini) {
+      return res.status(404).json({ msg: "Admini no encontrado" });
+    }
+
+    if (admini.rol !== "admini") {
+      return res.status(400).json({ msg: "Solo puedes editar cuentas de tipo admini" });
+    }
+
+    // Actualizar celular si se proporciona
+    if (celular) {
+      admini.celular = celular;
+    }
+
+    // Solo actualizar facultad y horas si es tipo estudiante
+    if (admini.tipo === "estudiante") {
+      if (facultad !== undefined) {
+        admini.facultad = facultad;
+      }
+      if (horasDePasantia !== undefined) {
+        admini.horasDePasantia = horasDePasantia;
+      }
+    }
+
+    await admini.save();
+
+    res.status(200).json({ 
+      msg: "Admini actualizado correctamente",
+      admini: {
+        id: admini._id,
+        nombre: admini.nombre,
+        email: admini.email,
+        tipo: admini.tipo,
+        celular: admini.celular,
+        facultad: admini.facultad,
+        horasDePasantia: admini.horasDePasantia
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ msg: "Error al editar admini", error: error.message });
+  }
+};
+
+// Eliminar admini
 const eliminarAdministrador = async (req, res) => {
   try {
     if (req.user.rol !== "administrador") {
@@ -259,44 +471,26 @@ const eliminarAdministrador = async (req, res) => {
     }
 
     if (adminAEliminar.rol !== "admini") {
-      return res.status(400).json({ msg: "Solo puedes eliminar cuentas de tipo Admini" });
+      return res.status(400).json({ msg: "Solo puedes eliminar cuentas de tipo admini" });
     }
 
-    if (req.user.id === id) {
+    if (req.user._id.toString() === id) {
       return res.status(400).json({ msg: "No puedes eliminarte a ti mismo" });
     }
 
     await adminAEliminar.deleteOne();
-    return res.status(200).json({ msg: "Administrador eliminado correctamente" });
-
+    res.status(200).json({ msg: "Admini eliminado correctamente" });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ msg: "Error del servidor" });
+    res.status(500).json({ msg: "Error al eliminar admini", error: error.message });
   }
 };
 
-//listar adminis - listo
-const listarAdminis = async (req, res) => {
-  try {
-    if (req.user.rol !== "administrador") {
-      return res.status(403).json({ msg: "No tienes permiso para ver esta información" });
-    }
+// ==================== CRUD PASANTES ====================
 
-    const adminis = await Administrador.find({ rol: "admini" }).select("-password -token");
-
-    res.status(200).json(adminis);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Error al obtener los adminis" });
-  }
-};
-
-// PASANTES
-//Commit para hacer la documetnacion 
-// Crear pasante - listo, hecho un cambio verificar despues
+// Crear pasante
 const crearPasante = async (req, res) => {
   try {
-    const { nombre, email, facultad, celular } = req.body;
+    const { nombre, email, facultad, celular, horasDePasantia } = req.body;
 
     if (!nombre || !email || !facultad || !celular) {
       return res.status(400).json({ msg: "Todos los campos son obligatorios" });
@@ -307,34 +501,36 @@ const crearPasante = async (req, res) => {
       return res.status(400).json({ msg: "El correo ya está registrado" });
     }
 
-    // Crear pasante y generar token de confirmación
     const nuevoPasante = new Pasante({
       nombre,
       email,
       facultad,
       celular,
+      horasDePasantia: horasDePasantia || 0
     });
 
     const token = nuevoPasante.crearToken();
     await nuevoPasante.save();
 
-    // Enviar correo de confirmación
     sendMailToRegister(nuevoPasante.email, token);
 
     res.status(201).json({
-      msg: "Pasante creado correctamente, ahora el pasante debe verificar la cuenta con el link que se le envió a su correo",
+      msg: "Pasante creado correctamente. Se ha enviado un correo de confirmación",
       pasante: {
         id: nuevoPasante._id,
         nombre: nuevoPasante.nombre,
         email: nuevoPasante.email,
-      },
+        facultad: nuevoPasante.facultad,
+        celular: nuevoPasante.celular,
+        horasDePasantia: nuevoPasante.horasDePasantia
+      }
     });
   } catch (error) {
     res.status(500).json({ msg: "Error al crear pasante", error: error.message });
   }
 };
 
-//listo
+// Confirmar pasante
 const confirmarPasante = async (req, res) => {
   try {
     const { token } = req.params;
@@ -349,39 +545,51 @@ const confirmarPasante = async (req, res) => {
     pasante.token = null;
     await pasante.save();
 
-    res.status(200).json({ msg: "Cuenta confirmada correctamente" });
+    res.status(200).json({ msg: "Cuenta confirmada correctamente. Ya puedes iniciar sesión con Google" });
   } catch (error) {
-    res.status(500).json({
-      msg: "Error al confirmar cuenta",
-      error: error.message,
-    });
+    res.status(500).json({ msg: "Error al confirmar cuenta", error: error.message });
   }
 };
 
-// Obtener todos los pasantes - listo
+// Obtener todos los pasantes
 const obtenerPasantes = async (req, res) => {
   try {
     const { search } = req.query;
     let filtro = {};
+    
     if (search) {
       const regex = new RegExp(search, "i");
-      filtro = { $or: [{ nombre: regex }, { email: regex }] };
+      filtro = { 
+        $or: [
+          { nombre: regex }, 
+          { email: regex },
+          { facultad: regex }
+        ] 
+      };
     }
-    const pasantes = await Pasante.find(filtro).select('-password -token');
+    
+    const pasantes = await Pasante.find(filtro)
+      .select("nombre email facultad horasDePasantia celular fotoPerfil status createdAt")
+      .sort({ createdAt: -1 });
+    
     res.status(200).json(pasantes);
   } catch (error) {
-    res.status(500).json({ msg: "Error al obtener pasantes" });
+    res.status(500).json({ msg: "Error al obtener pasantes", error: error.message });
   }
 };
 
-// Obtener pasante por id - listo
+// Obtener pasante por ID
 const obtenerPasantePorId = async (req, res) => {
   try {
-    const pasante = await Pasante.findById(req.params.id).select('-password -token');
-    if (!pasante) return res.status(404).json({ msg: "Pasante no encontrado" });
+    const pasante = await Pasante.findById(req.params.id).select("-password -token");
+    
+    if (!pasante) {
+      return res.status(404).json({ msg: "Pasante no encontrado" });
+    }
+    
     res.status(200).json(pasante);
   } catch (error) {
-    res.status(500).json({ msg: "Error al obtener pasante" });
+    res.status(500).json({ msg: "Error al obtener pasante", error: error.message });
   }
 };
 
@@ -389,23 +597,51 @@ const obtenerPasantePorId = async (req, res) => {
 const actualizarPasante = async (req, res) => {
   try {
     const pasante = await Pasante.findById(req.params.id);
-    if (!pasante) return res.status(404).json({ msg: "Pasante no encontrado" });
+    
+    if (!pasante) {
+      return res.status(404).json({ msg: "Pasante no encontrado" });
+    }
 
-    const { nombre, email, password, facultad, celular } = req.body;
+    const { celular, facultad, horasDePasantia } = req.body;
 
-    pasante.nombre = nombre || pasante.nombre;
-    pasante.email = email || pasante.email;
-    pasante.facultad = facultad || pasante.facultad;
-    pasante.celular = celular || pasante.celular;
+    // Actualizar celular siempre
+    if (celular) {
+      pasante.celular = celular;
+    }
 
-    if (password) {
-      pasante.password = await pasante.encrypPassword(password);
+    // Validar permisos para editar facultad y horasDePasantia
+    // Si el usuario es admini tipo estudiante, NO puede editar estos campos
+    if (req.user.rol === "admini" && req.user.tipo === "estudiante") {
+      if (facultad !== undefined || horasDePasantia !== undefined) {
+        return res.status(403).json({
+          msg: "Como admini de tipo estudiante, no puedes editar la facultad ni las horas de pasantía"
+        });
+      }
+    } else {
+      // Si es administrador o admini administrativo, puede editar todo
+      if (facultad !== undefined) {
+        pasante.facultad = facultad;
+      }
+      if (horasDePasantia !== undefined) {
+        pasante.horasDePasantia = horasDePasantia;
+      }
     }
 
     await pasante.save();
-    res.status(200).json({ msg: "Pasante actualizado", pasante });
+    
+    res.status(200).json({ 
+      msg: "Pasante actualizado correctamente", 
+      pasante: {
+        id: pasante._id,
+        nombre: pasante.nombre,
+        email: pasante.email,
+        facultad: pasante.facultad,
+        horasDePasantia: pasante.horasDePasantia,
+        celular: pasante.celular
+      }
+    });
   } catch (error) {
-    res.status(500).json({ msg: "Error al actualizar pasante" });
+    res.status(500).json({ msg: "Error al actualizar pasante", error: error.message });
   }
 };
 
@@ -413,31 +649,41 @@ const actualizarPasante = async (req, res) => {
 const eliminarPasante = async (req, res) => {
   try {
     const pasante = await Pasante.findById(req.params.id);
-    if (!pasante) return res.status(404).json({ msg: "Pasante no encontrado" });
+    
+    if (!pasante) {
+      return res.status(404).json({ msg: "Pasante no encontrado" });
+    }
 
     await pasante.deleteOne();
     res.status(200).json({ msg: "Pasante eliminado correctamente" });
   } catch (error) {
-    res.status(500).json({ msg: "Error al eliminar pasante" });
+    res.status(500).json({ msg: "Error al eliminar pasante", error: error.message });
   }
 };
 
 export {
+  // Autenticación
   loginAdministrador,
-  cambiarPasswordAdministrador,
+  confirmarCuentaAdmini,
+  // Perfil
   obtenerPerfilAdministrador,
+  actualizarPerfilAdministrador,
+  actualizarFotoPerfilAdministrador,
+  // Contraseñas
+  cambiarPasswordAdministrador,
   solicitarRecuperacionPassword,
   validarTokenRecuperacion,
   recuperarPassword,
-  eliminarAdministrador,
-  listarAdminis,
-  //Administrador
+  // CRUD Adminis
   crearAdmin,
-  confirmarCuentaAdmini,
-  // Pasantes
+  listarAdminis,
+  obtenerAdminiPorId,
+  editarAdmini,
+  eliminarAdministrador,
+  // CRUD Pasantes
   crearPasante,
-  obtenerPasantes,
   confirmarPasante,
+  obtenerPasantes,
   obtenerPasantePorId,
   actualizarPasante,
   eliminarPasante
