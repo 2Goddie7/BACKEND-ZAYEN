@@ -81,7 +81,7 @@ app.use("/api/publico", usuarioPublicoRoutes);
 // Middleware para rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ 
-    msg: "❌ Endpoint no encontrado",
+    msg: "Error 404, Endpoint no encontrado! :(",
     path: req.path,
     method: req.method
   });

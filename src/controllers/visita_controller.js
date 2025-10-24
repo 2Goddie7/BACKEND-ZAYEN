@@ -12,8 +12,8 @@ const crearVisita = async (req, res) => {
       return res.status(400).json({ msg: "Todos los campos son obligatorios" });
     }
 
-    if (cantidadPersonas < 1) {
-      return res.status(400).json({ msg: "La cantidad de personas debe ser al menos 1" });
+    if (cantidadPersonas < 2) {
+      return res.status(400).json({ msg: "La cantidad de personas para registrar una visita debe ser al menos 2" });
     }
 
     const nuevaVisita = new Visita({
