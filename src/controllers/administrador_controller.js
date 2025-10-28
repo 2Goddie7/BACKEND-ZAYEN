@@ -199,7 +199,11 @@ const cambiarPasswordAdministrador = async (req, res) => {
       return res.status(400).json({ msg: "La nueva contraseña debe tener al menos 8 caracteres" });
     }
 
-    const admin = req.user;
+    const admin = await Administrador.findById(req.user.id);
+
+    if (!admin) {
+      return res.status(404).json({ msg: "Administrador no encontrado" });
+    }
 
     const passwordValida = await admin.matchPassword(actualPassword);
     if (!passwordValida) {
@@ -214,6 +218,7 @@ const cambiarPasswordAdministrador = async (req, res) => {
     res.status(500).json({ msg: "Error al cambiar la contraseña", error: error.message });
   }
 };
+
 
 // Solicitar recuperación de contraseña
 const solicitarRecuperacionPassword = async (req, res) => {
