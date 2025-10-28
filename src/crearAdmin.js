@@ -3,7 +3,7 @@ import Administrador from './models/Administrador.js';
 
 async function crearAdministrador() {
   try {
-    await mongoose.connect('mongodb+srv://Lizzie:1234@cluster0.vchzz3b.mongodb.net/Zayenr');
+    await mongoose.connect(process.env.MONGODB_URI_ATLAS);
 
     // Crea una instancia del modelo
     const admin = new Administrador({
