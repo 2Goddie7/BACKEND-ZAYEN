@@ -1,6 +1,5 @@
 import Visitante from "../models/Visitante.js";
 
-// ==================== CRUD VISITANTES ====================
 
 // Crear visitante (Accesible por: Administrador, Admini, Pasante y Usuario Público)
 const crearVisitante = async (req, res) => {
