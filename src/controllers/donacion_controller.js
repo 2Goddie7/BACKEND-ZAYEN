@@ -5,7 +5,7 @@ import { CONFIG_MUSEO } from "../config/museo.config.js";
 
 dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_PRIVATE_KEY);
 
 // ==================== DONACIÓN ECONÓMICA ====================
 
