@@ -1,49 +1,90 @@
 import { Router } from "express";
-import { crearVisitante } from "../controllers/visitante_controller.js";
-import { crearDonacion, crearSesionPagoStripe } from "../controllers/donacion_controller.js";
+import {
+  crearVisita,
+  obtenerVisitas,
+  obtenerVisitaPorId,
+  actualizarEstadoVisita,
+  eliminarVisita,
+  consultarDisponibilidad,
+  sugerirHorariosDisponibles,
+  obtenerEstadisticasVisitas
+} from "../controllers/visita_controller.js";
+import { verificarToken, autorizarRoles } from "../middleware/jwt.js";
 import {
   validarCamposRequeridos,
-  validarCedula,
-  validarMonto
+  validarNombre,
+  validarInstitucion,
+  validarCantidadPersonas
 } from "../middleware/validacion.js";
 
 const router = Router();
 
-// ==================== RUTAS PÚBLICAS PARA USUARIOS ====================
+// ==================== RUTAS PÚBLICAS ====================
 
-// Registrar visita (por QR o formulario público)
-router.post(
-  "/visita",
-  validarCamposRequeridos(["nombre", "cedula", "institucion"]),
-  validarCedula,
-  crearVisitante
+// Consultar disponibilidad (público)
+router.get(
+  "/disponibilidad",
+  consultarDisponibilidad
 );
 
-// Crear registro de donación
-router.post(
-  "/donacion",
-  validarCamposRequeridos(["nombreDonante", "institucion", "monto"]),
-  validarMonto,
-  crearDonacion
+// Sugerir horarios disponibles (público)
+router.get(
+  "/sugerir-horarios",
+  sugerirHorariosDisponibles
 );
 
-// Crear sesión de pago para donación
+// ==================== RUTAS PROTEGIDAS ====================
+
+// Crear visita (Admin, Admini, Pasante)
 router.post(
-  "/donacion/pago",
-  validarCamposRequeridos(["donacionId"]),
-  crearSesionPagoStripe
+  "/",
+  verificarToken,
+  autorizarRoles("administrador", "admini", "pasante"),
+  validarCamposRequeridos(["institucion", "cantidadPersonas", "fechaVisita", "horaBloque"]),
+  validarInstitucion,
+  validarCantidadPersonas,
+  crearVisita
 );
 
-// Ruta de información pública (opcional)
-router.get("/", (req, res) => {
-  res.json({
-    msg: "API Pública del Museo Gustavo Orcés",
-    endpoints: {
-      registrarVisita: "POST /api/publico/visita",
-      crearDonacion: "POST /api/publico/donacion",
-      pagarDonacion: "POST /api/publico/donacion/pago"
-    }
-  });
-});
+// Obtener todas las visitas
+router.get(
+  "/",
+  verificarToken,
+  autorizarRoles("administrador", "admini", "pasante"),
+  obtenerVisitas
+);
+
+// Obtener estadísticas
+router.get(
+  "/estadisticas",
+  verificarToken,
+  autorizarRoles("administrador", "admini", "pasante"),
+  obtenerEstadisticasVisitas
+);
+
+// Obtener visita por ID
+router.get(
+  "/:id",
+  verificarToken,
+  autorizarRoles("administrador", "admini", "pasante"),
+  obtenerVisitaPorId
+);
+
+// Actualizar estado de visita (realizada/cancelada)
+router.patch(
+  "/:id/estado",
+  verificarToken,
+  autorizarRoles("administrador", "admini", "pasante"),
+  validarCamposRequeridos(["status"]),
+  actualizarEstadoVisita
+);
+
+// Eliminar visita (solo Admin)
+router.delete(
+  "/:id",
+  verificarToken,
+  autorizarRoles("administrador"),
+  eliminarVisita
+);
 
 export default router;

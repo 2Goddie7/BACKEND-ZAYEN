@@ -1,47 +1,106 @@
 import { Router } from "express";
 import { crearVisitante } from "../controllers/visitante_controller.js";
-import { crearDonacion, crearSesionPagoStripe } from "../controllers/donacion_controller.js";
+import { 
+  crearDonacionEconomica, 
+  crearDonacionBienes,
+  crearSesionPagoStripe 
+} from "../controllers/donacion_controller.js";
+import { 
+  consultarDisponibilidad,
+  sugerirHorariosDisponibles 
+} from "../controllers/visita_controller.js";
+import { uploadGeneral } from "../middleware/upload.js";
 import {
   validarCamposRequeridos,
   validarCedula,
-  validarMonto
+  validarNombre,
+  validarMonto,
+  validarEstadoBien
 } from "../middleware/validacion.js";
 
 const router = Router();
 
 // ==================== RUTAS PÚBLICAS PARA USUARIOS ====================
 
-// Registrar visita (por QR o formulario público)
+// ==================== VISITANTES INDIVIDUALES ====================
+
+// Registrar visitante individual (por QR o formulario público)
 router.post(
-  "/visita",
+  "/visitante",
   validarCamposRequeridos(["nombre", "cedula", "institucion"]),
+  validarNombre,
   validarCedula,
   crearVisitante
 );
 
-// Crear registro de donación
-router.post(
-  "/donacion",
-  validarCamposRequeridos(["nombreDonante", "institucion", "monto"]),
-  validarMonto,
-  crearDonacion
+// ==================== VISITAS GRUPALES ====================
+
+// Consultar disponibilidad de visitas grupales
+router.get(
+  "/visitas/disponibilidad",
+  consultarDisponibilidad
 );
 
-// Crear sesión de pago para donación
+// Sugerir horarios disponibles para visitas grupales
+router.get(
+  "/visitas/sugerir-horarios",
+  sugerirHorariosDisponibles
+);
+
+// ==================== DONACIONES ====================
+
+// Crear donación económica
+router.post(
+  "/donacion/economica",
+  validarCamposRequeridos(["nombreDonante", "institucion", "monto"]),
+  validarNombre,
+  validarMonto,
+  crearDonacionEconomica
+);
+
+// Crear donación de bienes
+router.post(
+  "/donacion/bienes",
+  uploadGeneral.single("fotoBien"),
+  validarCamposRequeridos(["nombreDonante", "institucion", "descripcionBien", "estadoBien"]),
+  validarNombre,
+  validarEstadoBien,
+  crearDonacionBienes
+);
+
+// Crear sesión de pago para donación económica
 router.post(
   "/donacion/pago",
   validarCamposRequeridos(["donacionId"]),
   crearSesionPagoStripe
 );
 
-// Ruta de información pública (opcional)
+// ==================== INFORMACIÓN ====================
+
+// Ruta de información pública
 router.get("/", (req, res) => {
   res.json({
-    msg: "API Pública del Museo Gustavo Orcés",
+    msg: "🏛️ API Pública del Museo Gustavo Orcés",
+    version: "2.0.0",
     endpoints: {
-      registrarVisita: "POST /api/publico/visita",
-      crearDonacion: "POST /api/publico/donacion",
-      pagarDonacion: "POST /api/publico/donacion/pago"
+      visitantes: {
+        registrar: "POST /api/publico/visitante"
+      },
+      visitasGrupales: {
+        consultarDisponibilidad: "GET /api/publico/visitas/disponibilidad?fecha=YYYY-MM-DD",
+        sugerirHorarios: "GET /api/publico/visitas/sugerir-horarios?fecha=YYYY-MM-DD&personas=15"
+      },
+      donaciones: {
+        crearEconomica: "POST /api/publico/donacion/economica",
+        crearBienes: "POST /api/publico/donacion/bienes",
+        pagar: "POST /api/publico/donacion/pago"
+      }
+    },
+    informacion: {
+      horarioAtencion: "Lunes a Viernes, 08:00 - 16:30",
+      visitasIndividuales: "Sin restricción de horario",
+      visitasGrupales: "Bloques de 30 minutos, máximo 25 personas por bloque",
+      tiposDonacion: ["economica", "bienes"]
     }
   });
 });

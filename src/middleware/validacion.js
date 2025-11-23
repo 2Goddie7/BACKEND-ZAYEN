@@ -1,3 +1,5 @@
+import { CONFIG_MUSEO } from '../config/museo.config.js';
+
 // Middleware para validar campos requeridos
 export const validarCamposRequeridos = (camposRequeridos) => {
   return (req, res, next) => {
@@ -109,6 +111,129 @@ export const validarPassword = (req, res, next) => {
         msg: "La contraseña debe tener al menos 8 caracteres" 
       });
     }
+  }
+  
+  next();
+};
+
+// ==================== NUEVAS VALIDACIONES ====================
+
+// Validar nombre (mínimo 3 caracteres, solo letras y espacios)
+export const validarNombre = (req, res, next) => {
+  const { nombre, nombreDonante } = req.body;
+  const nombreValidar = nombre || nombreDonante;
+  
+  if (nombreValidar) {
+    const { NOMBRE_MIN_LENGTH, NOMBRE_MAX_LENGTH, NOMBRE_REGEX } = CONFIG_MUSEO.VALIDACIONES;
+    
+    // Validar longitud mínima
+    if (nombreValidar.trim().length < NOMBRE_MIN_LENGTH) {
+      return res.status(400).json({ 
+        msg: `El nombre debe tener al menos ${NOMBRE_MIN_LENGTH} caracteres` 
+      });
+    }
+    
+    // Validar longitud máxima
+    if (nombreValidar.trim().length > NOMBRE_MAX_LENGTH) {
+      return res.status(400).json({ 
+        msg: `El nombre no debe exceder ${NOMBRE_MAX_LENGTH} caracteres` 
+      });
+    }
+    
+    // Validar que solo contenga letras y espacios (incluye acentos y ñ)
+    if (!NOMBRE_REGEX.test(nombreValidar)) {
+      return res.status(400).json({ 
+        msg: "El nombre solo puede contener letras y espacios" 
+      });
+    }
+    
+    // Validar que no sea solo espacios o caracteres repetidos
+    const nombreSinEspacios = nombreValidar.replace(/\s/g, '');
+    const caracteresUnicos = new Set(nombreSinEspacios.toLowerCase()).size;
+    
+    if (caracteresUnicos < 2) {
+      return res.status(400).json({ 
+        msg: "El nombre no es válido" 
+      });
+    }
+  }
+  
+  next();
+};
+
+// Validar nombre de institución
+export const validarInstitucion = (req, res, next) => {
+  const { institucion } = req.body;
+  
+  if (institucion) {
+    const { NOMBRE_MIN_LENGTH, NOMBRE_MAX_LENGTH } = CONFIG_MUSEO.VALIDACIONES;
+    
+    if (institucion.trim().length < NOMBRE_MIN_LENGTH) {
+      return res.status(400).json({ 
+        msg: `El nombre de la institución debe tener al menos ${NOMBRE_MIN_LENGTH} caracteres` 
+      });
+    }
+    
+    if (institucion.trim().length > NOMBRE_MAX_LENGTH) {
+      return res.status(400).json({ 
+        msg: `El nombre de la institución no debe exceder ${NOMBRE_MAX_LENGTH} caracteres` 
+      });
+    }
+  }
+  
+  next();
+};
+
+// Validar cantidad de personas para visitas
+export const validarCantidadPersonas = (req, res, next) => {
+  const { cantidadPersonas } = req.body;
+  
+  if (cantidadPersonas !== undefined) {
+    const cantidad = parseInt(cantidadPersonas);
+    
+    if (isNaN(cantidad)) {
+      return res.status(400).json({ 
+        msg: "La cantidad de personas debe ser un número" 
+      });
+    }
+    
+    if (cantidad < CONFIG_MUSEO.VISITAS.CANTIDAD_MINIMA_GRUPO) {
+      return res.status(400).json({ 
+        msg: `La cantidad mínima de personas es ${CONFIG_MUSEO.VISITAS.CANTIDAD_MINIMA_GRUPO}` 
+      });
+    }
+    
+    if (cantidad > CONFIG_MUSEO.VISITAS.CANTIDAD_MAXIMA_GRUPO) {
+      return res.status(400).json({ 
+        msg: `La cantidad máxima de personas por visita es ${CONFIG_MUSEO.VISITAS.CANTIDAD_MAXIMA_GRUPO}` 
+      });
+    }
+  }
+  
+  next();
+};
+
+// Validar tipo de donación
+export const validarTipoDonacion = (req, res, next) => {
+  const { tipoDonacion } = req.body;
+  
+  if (tipoDonacion && !CONFIG_MUSEO.DONACIONES.TIPOS.includes(tipoDonacion)) {
+    return res.status(400).json({ 
+      msg: `Tipo de donación inválido. Tipos permitidos: ${CONFIG_MUSEO.DONACIONES.TIPOS.join(', ')}` 
+    });
+  }
+  
+  next();
+};
+
+// Validar estado del bien
+export const validarEstadoBien = (req, res, next) => {
+  const { estadoBien } = req.body;
+  
+  if (estadoBien && !CONFIG_MUSEO.DONACIONES.ESTADOS_BIEN.includes(estadoBien)) {
+    return res.status(400).json({ 
+      msg: `Estado del bien inválido. Estados permitidos: ${CONFIG_MUSEO.DONACIONES.ESTADOS_BIEN.join(', ')}` 
+    });
   }
   
   next();

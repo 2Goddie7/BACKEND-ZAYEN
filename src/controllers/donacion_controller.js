@@ -1,21 +1,25 @@
 import Donacion from "../models/Donacion.js";
 import Stripe from "stripe";
 import dotenv from "dotenv";
+import { CONFIG_MUSEO } from "../config/museo.config.js";
 
 dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// ==================== DONACIONES ====================
+// ==================== DONACIÓN ECONÓMICA ====================
 
-// Crear registro de donación (Usuario público - antes del pago)
-const crearDonacion = async (req, res) => {
+// Crear donación económica
+const crearDonacionEconomica = async (req, res) => {
   try {
-    const { nombreDonante, institucion, monto } = req.body;
+    const { nombreDonante, institucion, monto, descripcion } = req.body;
 
     // Validaciones
     if (!nombreDonante || !institucion || !monto) {
-      return res.status(400).json({ msg: "Todos los campos son obligatorios" });
+      return res.status(400).json({ 
+        msg: "Todos los campos son obligatorios",
+        camposRequeridos: ["nombreDonante", "institucion", "monto"]
+      });
     }
 
     if (monto <= 0) {
@@ -25,25 +29,32 @@ const crearDonacion = async (req, res) => {
     const nuevaDonacion = new Donacion({
       nombreDonante,
       institucion,
+      tipoDonacion: 'economica',
       monto,
-      status: "pendiente"
+      descripcion: descripcion || CONFIG_MUSEO.DONACIONES.DESCRIPCION_DEFAULT,
+      status: 'pendiente'
     });
 
     await nuevaDonacion.save();
 
     res.status(201).json({
-      msg: "Registro de donación creado. Procede al pago",
+      msg: "Donación económica registrada. Procede al pago",
       donacion: {
         id: nuevaDonacion._id,
         nombreDonante: nuevaDonacion.nombreDonante,
         institucion: nuevaDonacion.institucion,
+        tipoDonacion: nuevaDonacion.tipoDonacion,
         monto: nuevaDonacion.monto,
+        descripcion: nuevaDonacion.descripcion,
         fecha: nuevaDonacion.fecha,
         status: nuevaDonacion.status
       }
     });
   } catch (error) {
-    res.status(500).json({ msg: "Error al crear donación", error: error.message });
+    res.status(500).json({ 
+      msg: "Error al crear donación económica", 
+      error: error.message 
+    });
   }
 };
 
@@ -52,9 +63,21 @@ const crearSesionPagoStripe = async (req, res) => {
   try {
     const { donacionId } = req.body;
 
+    if (!donacionId) {
+      return res.status(400).json({ msg: "El ID de donación es requerido" });
+    }
+
     const donacion = await Donacion.findById(donacionId);
+    
     if (!donacion) {
       return res.status(404).json({ msg: "Donación no encontrada" });
+    }
+
+    // Validar que sea donación económica
+    if (donacion.tipoDonacion !== 'economica') {
+      return res.status(400).json({ 
+        msg: "Solo las donaciones económicas requieren pago con Stripe" 
+      });
     }
 
     if (donacion.status === "completada") {
@@ -82,6 +105,7 @@ const crearSesionPagoStripe = async (req, res) => {
       cancel_url: `${process.env.URL_FRONTEND}/donacion/cancelada`,
       metadata: {
         donacionId: donacion._id.toString(),
+        tipoDonacion: 'economica'
       },
     });
 
@@ -95,7 +119,10 @@ const crearSesionPagoStripe = async (req, res) => {
       url: session.url
     });
   } catch (error) {
-    res.status(500).json({ msg: "Error al crear sesión de pago", error: error.message });
+    res.status(500).json({ 
+      msg: "Error al crear sesión de pago", 
+      error: error.message 
+    });
   }
 };
 
@@ -121,7 +148,7 @@ const webhookStripe = async (req, res) => {
 
     // Actualizar el estado de la donación
     const donacion = await Donacion.findById(donacionId);
-    if (donacion) {
+    if (donacion && donacion.tipoDonacion === 'economica') {
       donacion.status = "completada";
       donacion.stripePaymentId = session.payment_intent;
       await donacion.save();
@@ -146,33 +173,167 @@ const verificarEstadoPago = async (req, res) => {
 
     res.status(200).json({
       paymentStatus: session.payment_status,
-      donacion: donacion || null
+      donacion: donacion ? {
+        id: donacion._id,
+        nombreDonante: donacion.nombreDonante,
+        institucion: donacion.institucion,
+        monto: donacion.monto,
+        status: donacion.status,
+        fecha: donacion.fecha
+      } : null
     });
   } catch (error) {
-    res.status(500).json({ msg: "Error al verificar estado de pago", error: error.message });
+    res.status(500).json({ 
+      msg: "Error al verificar estado de pago", 
+      error: error.message 
+    });
   }
 };
 
-// Obtener todas las donaciones (Solo lectura para admin/admini/pasante)
+// ==================== DONACIÓN DE BIENES ====================
+
+// Crear donación de bienes
+const crearDonacionBienes = async (req, res) => {
+  try {
+    const { nombreDonante, institucion, descripcionBien, estadoBien, descripcion } = req.body;
+
+    // Validaciones
+    if (!nombreDonante || !institucion || !descripcionBien || !estadoBien) {
+      return res.status(400).json({ 
+        msg: "Todos los campos son obligatorios",
+        camposRequeridos: ["nombreDonante", "institucion", "descripcionBien", "estadoBien", "fotoBien"]
+      });
+    }
+
+    // Validar que se haya subido una foto
+    if (!req.file) {
+      return res.status(400).json({ msg: "La foto del bien es requerida" });
+    }
+
+    // Validar estado del bien
+    if (!CONFIG_MUSEO.DONACIONES.ESTADOS_BIEN.includes(estadoBien)) {
+      return res.status(400).json({ 
+        msg: `Estado del bien inválido. Estados permitidos: ${CONFIG_MUSEO.DONACIONES.ESTADOS_BIEN.join(', ')}` 
+      });
+    }
+
+    const nuevaDonacion = new Donacion({
+      nombreDonante,
+      institucion,
+      tipoDonacion: 'bienes',
+      descripcionBien,
+      estadoBien,
+      fotoBien: req.file.path, // URL de Cloudinary
+      descripcion: descripcion || CONFIG_MUSEO.DONACIONES.DESCRIPCION_DEFAULT,
+      monto: 0,
+      status: 'pendiente'
+    });
+
+    await nuevaDonacion.save();
+
+    res.status(201).json({
+      msg: "Donación de bienes registrada correctamente. Será revisada por el equipo del museo",
+      donacion: {
+        id: nuevaDonacion._id,
+        nombreDonante: nuevaDonacion.nombreDonante,
+        institucion: nuevaDonacion.institucion,
+        tipoDonacion: nuevaDonacion.tipoDonacion,
+        descripcionBien: nuevaDonacion.descripcionBien,
+        estadoBien: nuevaDonacion.estadoBien,
+        fotoBien: nuevaDonacion.fotoBien,
+        descripcion: nuevaDonacion.descripcion,
+        fecha: nuevaDonacion.fecha,
+        status: nuevaDonacion.status
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      msg: "Error al crear donación de bienes", 
+      error: error.message 
+    });
+  }
+};
+
+// Actualizar estado de donación de bienes (Aceptar/Rechazar)
+const actualizarEstadoDonacionBienes = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validar que el status sea válido para donaciones de bienes
+    if (!CONFIG_MUSEO.DONACIONES.ESTADOS_BIENES.includes(status)) {
+      return res.status(400).json({ 
+        msg: `Estado inválido para donaciones de bienes. Estados permitidos: ${CONFIG_MUSEO.DONACIONES.ESTADOS_BIENES.join(', ')}` 
+      });
+    }
+
+    const donacion = await Donacion.findById(id);
+
+    if (!donacion) {
+      return res.status(404).json({ msg: "Donación no encontrada" });
+    }
+
+    // Validar que sea donación de bienes
+    if (donacion.tipoDonacion !== 'bienes') {
+      return res.status(400).json({ 
+        msg: "Esta acción solo aplica a donaciones de bienes" 
+      });
+    }
+
+    // Actualizar estado
+    donacion.status = status;
+    await donacion.save();
+
+    res.status(200).json({
+      msg: `Donación de bienes ${status === 'aceptada' ? 'aceptada' : 'rechazada'} correctamente`,
+      donacion: {
+        id: donacion._id,
+        nombreDonante: donacion.nombreDonante,
+        institucion: donacion.institucion,
+        descripcionBien: donacion.descripcionBien,
+        estadoBien: donacion.estadoBien,
+        status: donacion.status,
+        fecha: donacion.fecha
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      msg: "Error al actualizar estado de donación", 
+      error: error.message 
+    });
+  }
+};
+
+// ==================== CONSULTAS Y LISTADOS ====================
+
+// Obtener todas las donaciones
 const obtenerDonaciones = async (req, res) => {
   try {
-    const { search, status, fechaInicio, fechaFin } = req.query;
+    const { search, status, tipoDonacion, fechaInicio, fechaFin } = req.query;
     let filtro = {};
 
     // Filtro por búsqueda
     if (search) {
       const regex = new RegExp(search, "i");
-      filtro = {
-        $or: [
-          { nombreDonante: regex },
-          { institucion: regex }
-        ]
-      };
+      filtro.$or = [
+        { nombreDonante: regex },
+        { institucion: regex }
+      ];
     }
 
     // Filtro por estado
     if (status) {
       filtro.status = status;
+    }
+
+    // Filtro por tipo de donación
+    if (tipoDonacion) {
+      if (!CONFIG_MUSEO.DONACIONES.TIPOS.includes(tipoDonacion)) {
+        return res.status(400).json({ 
+          msg: `Tipo inválido. Tipos permitidos: ${CONFIG_MUSEO.DONACIONES.TIPOS.join(', ')}` 
+        });
+      }
+      filtro.tipoDonacion = tipoDonacion;
     }
 
     // Filtro por rango de fechas
@@ -184,21 +345,64 @@ const obtenerDonaciones = async (req, res) => {
     }
 
     const donaciones = await Donacion.find(filtro)
-      .select("nombreDonante institucion monto fecha status")
+      .select("-stripePaymentId")
       .sort({ fecha: -1 });
 
-    // Calcular total donado
+    // Calcular estadísticas
+    const totalDonacionesEconomicas = donaciones.filter(d => 
+      d.tipoDonacion === 'economica' && d.status === 'completada'
+    ).length;
+
     const totalDonado = donaciones
-      .filter(d => d.status === "completada")
+      .filter(d => d.tipoDonacion === 'economica' && d.status === 'completada')
       .reduce((sum, donacion) => sum + donacion.monto, 0);
+
+    const totalDonacionesBienes = donaciones.filter(d => 
+      d.tipoDonacion === 'bienes'
+    ).length;
+
+    const bienesAceptados = donaciones.filter(d => 
+      d.tipoDonacion === 'bienes' && d.status === 'aceptada'
+    ).length;
 
     res.status(200).json({
       total: donaciones.length,
-      totalDonado,
-      donaciones
+      estadisticas: {
+        economicas: {
+          total: totalDonacionesEconomicas,
+          montoTotal: totalDonado
+        },
+        bienes: {
+          total: totalDonacionesBienes,
+          aceptados: bienesAceptados,
+          pendientes: donaciones.filter(d => 
+            d.tipoDonacion === 'bienes' && d.status === 'pendiente'
+          ).length
+        }
+      },
+      donaciones: donaciones.map(d => ({
+        id: d._id,
+        nombreDonante: d.nombreDonante,
+        institucion: d.institucion,
+        tipoDonacion: d.tipoDonacion,
+        ...(d.tipoDonacion === 'economica' ? {
+          monto: d.monto
+        } : {
+          descripcionBien: d.descripcionBien,
+          estadoBien: d.estadoBien,
+          fotoBien: d.fotoBien
+        }),
+        descripcion: d.descripcion,
+        status: d.status,
+        fecha: d.fecha,
+        createdAt: d.createdAt
+      }))
     });
   } catch (error) {
-    res.status(500).json({ msg: "Error al obtener donaciones", error: error.message });
+    res.status(500).json({ 
+      msg: "Error al obtener donaciones", 
+      error: error.message 
+    });
   }
 };
 
@@ -206,26 +410,57 @@ const obtenerDonaciones = async (req, res) => {
 const obtenerDonacionPorId = async (req, res) => {
   try {
     const { id } = req.params;
-    const donacion = await Donacion.findById(id);
+    const donacion = await Donacion.findById(id).select("-stripePaymentId");
 
     if (!donacion) {
       return res.status(404).json({ msg: "Donación no encontrada" });
     }
 
-    res.status(200).json(donacion);
+    const respuesta = {
+      id: donacion._id,
+      nombreDonante: donacion.nombreDonante,
+      institucion: donacion.institucion,
+      tipoDonacion: donacion.tipoDonacion,
+      descripcion: donacion.descripcion,
+      status: donacion.status,
+      fecha: donacion.fecha,
+      createdAt: donacion.createdAt,
+      updatedAt: donacion.updatedAt
+    };
+
+    if (donacion.tipoDonacion === 'economica') {
+      respuesta.monto = donacion.monto;
+    } else {
+      respuesta.descripcionBien = donacion.descripcionBien;
+      respuesta.estadoBien = donacion.estadoBien;
+      respuesta.fotoBien = donacion.fotoBien;
+    }
+
+    res.status(200).json(respuesta);
   } catch (error) {
-    res.status(500).json({ msg: "Error al obtener donación", error: error.message });
+    res.status(500).json({ 
+      msg: "Error al obtener donación", 
+      error: error.message 
+    });
   }
 };
 
 // Obtener estadísticas de donaciones
 const obtenerEstadisticasDonaciones = async (req, res) => {
   try {
-    const totalDonaciones = await Donacion.countDocuments({ status: "completada" });
+    // Donaciones económicas completadas
+    const totalDonacionesEconomicas = await Donacion.countDocuments({ 
+      tipoDonacion: 'economica',
+      status: 'completada' 
+    });
 
-    // Total recaudado
     const totalRecaudado = await Donacion.aggregate([
-      { $match: { status: "completada" } },
+      { 
+        $match: { 
+          tipoDonacion: 'economica',
+          status: 'completada' 
+        } 
+      },
       {
         $group: {
           _id: null,
@@ -234,21 +469,36 @@ const obtenerEstadisticasDonaciones = async (req, res) => {
       }
     ]);
 
+    // Donaciones de bienes
+    const totalDonacionesBienes = await Donacion.countDocuments({ 
+      tipoDonacion: 'bienes'
+    });
+
+    const bienesAceptados = await Donacion.countDocuments({ 
+      tipoDonacion: 'bienes',
+      status: 'aceptada' 
+    });
+
+    const bienesPendientes = await Donacion.countDocuments({ 
+      tipoDonacion: 'bienes',
+      status: 'pendiente' 
+    });
+
     // Donaciones del mes actual
     const inicioMes = new Date();
     inicioMes.setDate(1);
     inicioMes.setHours(0, 0, 0, 0);
 
     const donacionesMesActual = await Donacion.countDocuments({
-      fecha: { $gte: inicioMes },
-      status: "completada"
+      fecha: { $gte: inicioMes }
     });
 
     const recaudadoMesActual = await Donacion.aggregate([
       {
         $match: {
           fecha: { $gte: inicioMes },
-          status: "completada"
+          tipoDonacion: 'economica',
+          status: 'completada'
         }
       },
       {
@@ -261,35 +511,56 @@ const obtenerEstadisticasDonaciones = async (req, res) => {
 
     // Donaciones por institución
     const donacionesPorInstitucion = await Donacion.aggregate([
-      { $match: { status: "completada" } },
       {
         $group: {
           _id: "$institucion",
           totalDonaciones: { $sum: 1 },
-          montoTotal: { $sum: "$monto" }
+          montoTotal: { 
+            $sum: { 
+              $cond: [
+                { $eq: ["$tipoDonacion", "economica"] },
+                "$monto",
+                0
+              ]
+            }
+          }
         }
       },
-      { $sort: { montoTotal: -1 } },
+      { $sort: { totalDonaciones: -1 } },
       { $limit: 10 }
     ]);
 
     res.status(200).json({
-      totalDonaciones,
-      totalRecaudado: totalRecaudado[0]?.total || 0,
-      donacionesMesActual,
-      recaudadoMesActual: recaudadoMesActual[0]?.total || 0,
-      donacionesPorInstitucion
+      economicas: {
+        totalDonaciones: totalDonacionesEconomicas,
+        totalRecaudado: totalRecaudado[0]?.total || 0,
+        recaudadoMesActual: recaudadoMesActual[0]?.total || 0
+      },
+      bienes: {
+        total: totalDonacionesBienes,
+        aceptados: bienesAceptados,
+        pendientes: bienesPendientes
+      },
+      general: {
+        donacionesMesActual,
+        donacionesPorInstitucion
+      }
     });
   } catch (error) {
-    res.status(500).json({ msg: "Error al obtener estadísticas", error: error.message });
+    res.status(500).json({ 
+      msg: "Error al obtener estadísticas", 
+      error: error.message 
+    });
   }
 };
 
 export {
-  crearDonacion,
+  crearDonacionEconomica,
   crearSesionPagoStripe,
   webhookStripe,
   verificarEstadoPago,
+  crearDonacionBienes,
+  actualizarEstadoDonacionBienes,
   obtenerDonaciones,
   obtenerDonacionPorId,
   obtenerEstadisticasDonaciones

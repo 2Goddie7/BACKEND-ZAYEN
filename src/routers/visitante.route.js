@@ -9,7 +9,8 @@ import {
 import { verificarToken, autorizarRoles } from "../middleware/jwt.js";
 import {
   validarCamposRequeridos,
-  validarCedula
+  validarCedula,
+  validarNombre // ← AGREGADO
 } from "../middleware/validacion.js";
 
 const router = Router();
@@ -20,6 +21,7 @@ const router = Router();
 router.post(
   "/publico",
   validarCamposRequeridos(["nombre", "cedula", "institucion"]),
+  validarNombre, // ← AGREGADO
   validarCedula,
   crearVisitante
 );
@@ -32,6 +34,7 @@ router.post(
   verificarToken,
   autorizarRoles("administrador", "admini", "pasante"),
   validarCamposRequeridos(["nombre", "cedula", "institucion"]),
+  validarNombre, // ← AGREGADO
   validarCedula,
   crearVisitante
 );

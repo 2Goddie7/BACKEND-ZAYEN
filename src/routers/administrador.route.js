@@ -28,7 +28,8 @@ import {
   validarEmail,
   validarCelular,
   validarPassword,
-  validarHorasPasantia
+  validarHorasPasantia,
+  validarNombre // ← AGREGADO
 } from "../middleware/validacion.js";
 
 const router = Router();
@@ -106,6 +107,7 @@ router.post(
   verificarToken,
   autorizarRoles("administrador"),
   validarCamposRequeridos(["nombre", "email", "password", "celular", "tipo"]),
+  validarNombre, // ← AGREGADO
   validarEmail,
   validarCelular,
   validarPassword,
@@ -149,6 +151,7 @@ router.post(
   verificarToken,
   autorizarRoles("administrador", "admini"),
   validarCamposRequeridos(["nombre", "email", "facultad", "celular"]),
+  validarNombre, // ← AGREGADO
   validarEmail,
   validarCelular,
   validarHorasPasantia,
