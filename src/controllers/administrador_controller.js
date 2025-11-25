@@ -37,7 +37,7 @@ const loginAdministrador = async (req, res) => {
 
     const passwordValida = await admin.matchPassword(password);
     if (!passwordValida) {
-      return res.status(401).json({ msg: "Contraseña incorrecta" });
+      return res.status(401).json({ msg: "¡Credenciales incorrectas!" });
     }
 
     const token = generarToken(admin._id, admin.rol);
@@ -169,7 +169,7 @@ const actualizarFotoPerfilAdministrador = async (req, res) => {
     }
 
     if (!req.file) {
-      return res.status(400).json({ msg: "No se subió ninguna imagen" });
+      return res.status(400).json({ msg: "No se subió ninguna imagen :/" });
     }
 
     admin.fotoPerfil = req.file.path;
@@ -312,7 +312,7 @@ const crearAdmin = async (req, res) => {
     if (tipo === "estudiante") {
       if (!facultad || horasDePasantia === undefined) {
         return res.status(400).json({ 
-          msg: "Para adminis de tipo estudiante, facultad y horasDePasantia son obligatorios" 
+          msg: "Para adminis de tipo estudiante, los campos facultad y horasDePasantia son obligatorios!" 
         });
       }
     }
@@ -320,7 +320,7 @@ const crearAdmin = async (req, res) => {
     // Verificar si el email ya existe
     const emailExiste = await Administrador.findOne({ email });
     if (emailExiste) {
-      return res.status(400).json({ msg: "El correo ya está registrado" });
+      return res.status(400).json({ msg: "El correo ya se encuentra registrado" });
     }
 
     // Crear nuevo admini
