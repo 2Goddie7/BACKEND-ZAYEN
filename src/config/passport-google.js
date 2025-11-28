@@ -5,7 +5,7 @@ import Pasante from "../models/Pasante.js";
 
 dotenv.config();
 
-const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
+const backendUrl = process.env.BACKEND_URL || "http://localhost:3000";
 
 passport.use(
   new GoogleStrategy(
