@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
-import Administrador from './models/Administrador.js'; 
+import Administrador from './models/Administrador.js';
+import { sendMailToRegister } from './config/nodemailer.js';
+
 
 async function crearAdministrador() {
   try {
@@ -18,8 +20,9 @@ async function crearAdministrador() {
 
     // Guarda en la base de datos
     await admin.save();
+    sendMailToRegister(admin.email, admin.nombre);
 
-    console.log('Administrador creado exitosamente');
+    console.log('Administrador creado exitosamente, revisa tu correo para confirmar la cuenta.');
     await mongoose.disconnect();
   } catch (error) {
     console.error('Error creando administrador:', error);
