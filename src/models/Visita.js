@@ -42,9 +42,11 @@ const visitaSchema = new Schema({
         },
         default: 'pendiente'
     },
+    // ✅ NUEVO CAMPO: Descripción de la visita
     descripcion: {
         type: String,
         default: '',
+        trim: true,
         maxlength: [500, 'La descripción no debe exceder 500 caracteres']
     }
 }, {
@@ -108,7 +110,13 @@ visitaSchema.statics.obtenerVisitasPorBloque = async function(fechaVisita) {
             $group: {
                 _id: '$horaBloque',
                 totalPersonas: { $sum: '$cantidadPersonas' },
-                visitas: { $push: { institucion: '$institucion', cantidadPersonas: '$cantidadPersonas' } }
+                visitas: { 
+                    $push: { 
+                        institucion: '$institucion', 
+                        cantidadPersonas: '$cantidadPersonas',
+                        descripcion: '$descripcion' // ✅ Incluir descripción
+                    } 
+                }
             }
         },
         { $sort: { _id: 1 } }

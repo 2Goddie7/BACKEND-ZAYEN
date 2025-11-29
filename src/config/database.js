@@ -5,13 +5,14 @@ dotenv.config();
 
 mongoose.set("strictQuery", true);
 
-console.log("URL FRONT", process.env.URL_FRONTEND);
-console.log("LINMK DE MONGO → ", process.env.MONGODB_URI_ATLAS);
+if(!process.env.MONGODB_URI_ATLAS){
+  console.error('Configura la URI de Mongo en tu .env');
+}
 
 const connection = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI_ATLAS);
-    console.log("Database is connected");
+    console.log("Base de datos conectada exitosamente");
   } catch (error) {
     console.log(error);
   }

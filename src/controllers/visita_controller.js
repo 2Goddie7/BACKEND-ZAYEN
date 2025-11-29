@@ -12,7 +12,8 @@ import {
 // ==================== CREAR VISITA ====================
 const crearVisita = async (req, res) => {
   try {
-    const { institucion, cantidadPersonas, fechaVisita, horaBloque } = req.body;
+    // ✅ Incluir descripcion en la desestructuración
+    const { institucion, cantidadPersonas, fechaVisita, horaBloque, descripcion } = req.body;
 
     // Validar campos requeridos
     if (!institucion || !cantidadPersonas || !fechaVisita || !horaBloque) {
@@ -50,18 +51,20 @@ const crearVisita = async (req, res) => {
       });
     }
 
-    // Crear la visita
+    // Crear la visita - ✅ Incluir descripcion
     const nuevaVisita = new Visita({
       institucion,
       cantidadPersonas,
       fechaVisita: new Date(fechaVisita),
       horaBloque,
       bloqueId,
-      status: 'pendiente'
+      status: 'pendiente',
+      descripcion: descripcion || '' // ✅ Campo opcional
     });
 
     await nuevaVisita.save();
 
+    // ✅ Incluir descripcion en la respuesta
     res.status(201).json({
       msg: "Visita registrada correctamente",
       visita: {
@@ -70,7 +73,8 @@ const crearVisita = async (req, res) => {
         cantidadPersonas: nuevaVisita.cantidadPersonas,
         fechaVisita: formatearFecha(nuevaVisita.fechaVisita),
         horaBloque: nuevaVisita.horaBloque,
-        status: nuevaVisita.status
+        status: nuevaVisita.status,
+        descripcion: nuevaVisita.descripcion // ✅ Incluir en respuesta
       },
       capacidadBloque: {
         ocupados: capacidad.personasActuales + cantidadPersonas,
@@ -129,6 +133,7 @@ const obtenerVisitas = async (req, res) => {
       .filter(v => v.status !== 'cancelada')
       .reduce((sum, visita) => sum + visita.cantidadPersonas, 0);
 
+    // ✅ Incluir descripcion en el mapeo
     res.status(200).json({
       total: visitas.length,
       totalPersonas,
@@ -139,7 +144,7 @@ const obtenerVisitas = async (req, res) => {
         fechaVisita: formatearFecha(v.fechaVisita),
         horaBloque: v.horaBloque,
         status: v.status,
-        descripcion: v.descripcion,
+        descripcion: v.descripcion, // ✅ Incluir descripcion
         createdAt: v.createdAt
       }))
     });
@@ -161,6 +166,7 @@ const obtenerVisitaPorId = async (req, res) => {
       return res.status(404).json({ msg: "Visita no encontrada" });
     }
 
+    // ✅ Incluir descripcion en la respuesta
     res.status(200).json({
       id: visita._id,
       institucion: visita.institucion,
@@ -169,7 +175,7 @@ const obtenerVisitaPorId = async (req, res) => {
       horaBloque: visita.horaBloque,
       bloqueId: visita.bloqueId,
       status: visita.status,
-      descripcion: visita.descripcion,
+      descripcion: visita.descripcion, // ✅ Incluir descripcion
       createdAt: visita.createdAt,
       updatedAt: visita.updatedAt
     });
@@ -229,6 +235,7 @@ const actualizarEstadoVisita = async (req, res) => {
 
     await visita.save();
 
+    // ✅ Incluir descripcion en la respuesta
     res.status(200).json({
       msg: `Visita marcada como ${status}`,
       visita: {
@@ -238,7 +245,7 @@ const actualizarEstadoVisita = async (req, res) => {
         fechaVisita: formatearFecha(visita.fechaVisita),
         horaBloque: visita.horaBloque,
         status: visita.status,
-        descripcion: visita.descripcion
+        descripcion: visita.descripcion // ✅ Incluir descripcion
       }
     });
   } catch (error) {
@@ -329,6 +336,7 @@ const consultarDisponibilidad = async (req, res) => {
       fecha: formatearFecha(fechaConsulta),
       diaSemana: obtenerNombreDia(fechaConsulta),
       horarioAtencion: `${CONFIG_MUSEO.VISITAS.HORA_APERTURA} - ${CONFIG_MUSEO.VISITAS.HORA_CIERRE}`,
+      horarioAlmuerzo: `${CONFIG_MUSEO.VISITAS.HORA_INICIO_ALMUERZO} - ${CONFIG_MUSEO.VISITAS.HORA_FIN_ALMUERZO}`, // ✅ Nuevo
       capacidadMaximaPorBloque: CONFIG_MUSEO.VISITAS.CAPACIDAD_MAXIMA_POR_BLOQUE,
       bloques: disponibilidad,
       nota: CONFIG_MUSEO.VISITAS.NOTA_FERIADOS

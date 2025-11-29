@@ -30,13 +30,13 @@ export const esFechaFutura = (fechaVisita) => {
   return fecha >= hoy;
 };
 
-// Validar que el bloque horario sea válido
+// Validar que el bloque horario sea valido
 export const esBloqueValido = (horaBloque) => {
   const bloquesValidos = generarBloquesHorarios();
   return bloquesValidos.includes(horaBloque);
 };
 
-// Generar bloqueId único (YYYYMMDD-HHMM)
+// Generar bloqueId unico (añoMesDia-hora)
 export const generarBloqueId = (fechaVisita, horaBloque) => {
   const fecha = new Date(fechaVisita);
   const year = fecha.getFullYear();
