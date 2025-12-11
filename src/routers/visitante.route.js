@@ -10,7 +10,7 @@ import { verificarToken, autorizarRoles } from "../middleware/jwt.js";
 import {
   validarCamposRequeridos,
   validarCedula,
-  validarNombre // ← AGREGADO
+  validarNombre
 } from "../middleware/validacion.js";
 
 const router = Router();
@@ -21,20 +21,20 @@ const router = Router();
 router.post(
   "/publico",
   validarCamposRequeridos(["nombre", "cedula", "institucion"]),
-  validarNombre, // ← AGREGADO
+  validarNombre,
   validarCedula,
   crearVisitante
 );
 
 // ==================== RUTAS PROTEGIDAS ====================
 
-// Crear visitante (Admin, Admini, Pasante)
+// Crear visitante (Administrador general, Admini, Pasante)
 router.post(
   "/",
   verificarToken,
   autorizarRoles("administrador", "admini", "pasante"),
   validarCamposRequeridos(["nombre", "cedula", "institucion"]),
-  validarNombre, // ← AGREGADO
+  validarNombre,
   validarCedula,
   crearVisitante
 );

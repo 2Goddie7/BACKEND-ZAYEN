@@ -4,7 +4,7 @@ import { sendMailToRegister, sendMailToRecoveryPassword } from "../config/nodema
 import { generarToken } from "../middleware/jwt.js";
 import crypto from "crypto";
 
-// ==================== AUTENTICACIÓN ====================
+// ==================== AUTENTICACION ====================
 
 // Login administrador
 const loginAdministrador = async (req, res) => {
@@ -111,7 +111,7 @@ const obtenerPerfilAdministrador = async (req, res) => {
       fotoPerfil: admin.fotoPerfil
     };
 
-    // Si es admini de tipo estudiante, agregar campos adicionales
+    // Si es admini de tipo estudiante agregar campos adicionales
     if (admin.rol === "admini") {
       perfil.tipo = admin.tipo;
       if (admin.tipo === "estudiante") {
@@ -308,7 +308,7 @@ const crearAdmin = async (req, res) => {
       return res.status(400).json({ msg: "Todos los campos obligatorios deben ser completados" });
     }
 
-    // Si es tipo estudiante, validar campos adicionales
+    // Si es tipo estudiante validar campos adicionales
     if (tipo === "estudiante") {
       if (!facultad || horasDePasantia === undefined) {
         return res.status(400).json({ 
@@ -615,7 +615,7 @@ const actualizarPasante = async (req, res) => {
     }
 
     // Validar permisos para editar facultad y horasDePasantia
-    // Si el usuario es admini tipo estudiante, NO puede editar estos campos
+    // Si el usuario es admini tipo estudiante no puede editar estos campos
     if (req.user.rol === "admini" && req.user.tipo === "estudiante") {
       if (facultad !== undefined || horasDePasantia !== undefined) {
         return res.status(403).json({

@@ -10,8 +10,6 @@ import { validarCelular } from "../middleware/validacion.js";
 
 const router = Router();
 
-// ==================== RUTAS PROTEGIDAS (Solo Pasantes) ====================
-
 // Perfil del pasante
 router.get(
   "/perfil",

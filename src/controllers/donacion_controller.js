@@ -95,7 +95,7 @@ const crearSesionPagoStripe = async (req, res) => {
               name: `Donación al Museo Gustavo Orcés`,
               description: `Donación de ${donacion.nombreDonante} - ${donacion.institucion}`,
             },
-            unit_amount: Math.round(donacion.monto * 100), // Stripe maneja centavos
+            unit_amount: Math.round(donacion.monto * 100),
           },
           quantity: 1,
         },
@@ -223,7 +223,7 @@ const crearDonacionBienes = async (req, res) => {
       tipoDonacion: 'bienes',
       descripcionBien,
       estadoBien,
-      fotoBien: req.file.path, // URL de Cloudinary
+      fotoBien: req.file.path,
       descripcion: descripcion || CONFIG_MUSEO.DONACIONES.DESCRIPCION_DEFAULT,
       monto: 0,
       status: 'pendiente'
@@ -312,7 +312,7 @@ const obtenerDonaciones = async (req, res) => {
     const { search, status, tipoDonacion, fechaInicio, fechaFin } = req.query;
     let filtro = {};
 
-    // Filtro por búsqueda
+    // filtro por búsqueda
     if (search) {
       const regex = new RegExp(search, "i");
       filtro.$or = [
@@ -348,7 +348,7 @@ const obtenerDonaciones = async (req, res) => {
       .select("-stripePaymentId")
       .sort({ fecha: -1 });
 
-    // Calcular estadísticas
+    // Calcular estadisticas
     const totalDonacionesEconomicas = donaciones.filter(d => 
       d.tipoDonacion === 'economica' && d.status === 'completada'
     ).length;
@@ -448,7 +448,7 @@ const obtenerDonacionPorId = async (req, res) => {
 // Obtener estadísticas de donaciones
 const obtenerEstadisticasDonaciones = async (req, res) => {
   try {
-    // Donaciones económicas completadas
+    // Donaciones economicas completadas
     const totalDonacionesEconomicas = await Donacion.countDocuments({ 
       tipoDonacion: 'economica',
       status: 'completada' 

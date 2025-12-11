@@ -26,7 +26,7 @@ passport.use(
           return done(null, false, { message: "Correo no autorizado. Contacta al administrador." });
         }
 
-        // Si existe, dejarlo pasar
+        // Si existe se lo deja pasar
         return done(null, pasante);
       } catch (err) {
         return done(err, null);

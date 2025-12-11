@@ -23,9 +23,6 @@ import {
 
 const router = Router();
 
-// ==================== RUTAS PÚBLICAS PARA USUARIOS ====================
-
-// ==================== VISITANTES INDIVIDUALES ====================
 
 // Registrar visitante individual (por QR o formulario público)
 router.post(
@@ -36,7 +33,6 @@ router.post(
   crearVisitante
 );
 
-// ↓↓↓↓↓↓↓↓ VISITAS GRUPALES ↓↓↓↓↓↓↓↓
 
 // Registrar visita grupal todo el mundo
 router.post(

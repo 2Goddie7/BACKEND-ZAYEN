@@ -3,10 +3,10 @@ import { generarToken } from "../middleware/jwt.js";
 
 // ==================== AUTENTICACIÓN ====================
 
-// Login con Google (manejado en auth_routes.js, pero aquí una función auxiliar si necesitas)
+// Login con Google
 const loginPasanteGoogle = async (req, res) => {
   try {
-    // Esta función es llamada después del callback de Google
+    // Esta funcion se llamada después del callback de Google
     const pasante = req.user;
 
     if (!pasante) {
@@ -58,7 +58,7 @@ const obtenerPerfilPasante = async (req, res) => {
   }
 };
 
-// Actualizar perfil del pasante (solo celular y foto)
+// Actualizar perfil del pasante
 const actualizarPerfilPasante = async (req, res) => {
   try {
     const pasante = req.user;

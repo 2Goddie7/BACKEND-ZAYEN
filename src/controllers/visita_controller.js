@@ -12,10 +12,8 @@ import {
 // ==================== CREAR VISITA ====================
 const crearVisita = async (req, res) => {
   try {
-    // ✅ Incluir descripcion en la desestructuración
     const { institucion, cantidadPersonas, fechaVisita, horaBloque, descripcion } = req.body;
 
-    // Validar campos requeridos
     if (!institucion || !cantidadPersonas || !fechaVisita || !horaBloque) {
       return res.status(400).json({ 
         msg: "Todos los campos son obligatorios",
@@ -23,7 +21,6 @@ const crearVisita = async (req, res) => {
       });
     }
 
-    // Validar fecha y hora
     const validacion = validarFechaHoraVisita(fechaVisita, horaBloque);
     if (!validacion.valido) {
       return res.status(400).json({ 
@@ -32,10 +29,8 @@ const crearVisita = async (req, res) => {
       });
     }
 
-    // Generar bloqueId
     const bloqueId = generarBloqueId(fechaVisita, horaBloque);
 
-    // Validar capacidad del bloque
     const capacidad = await Visita.validarCapacidadBloque(bloqueId, cantidadPersonas);
 
     if (!capacidad.permitido) {
@@ -51,7 +46,6 @@ const crearVisita = async (req, res) => {
       });
     }
 
-    // Crear la visita - ✅ Incluir descripcion
     const nuevaVisita = new Visita({
       institucion,
       cantidadPersonas,
@@ -59,12 +53,11 @@ const crearVisita = async (req, res) => {
       horaBloque,
       bloqueId,
       status: 'pendiente',
-      descripcion: descripcion || '' // ✅ Campo opcional
+      descripcion: descripcion || ''
     });
 
     await nuevaVisita.save();
 
-    // ✅ Incluir descripcion en la respuesta
     res.status(201).json({
       msg: "Visita registrada correctamente",
       visita: {
@@ -74,7 +67,7 @@ const crearVisita = async (req, res) => {
         fechaVisita: formatearFecha(nuevaVisita.fechaVisita),
         horaBloque: nuevaVisita.horaBloque,
         status: nuevaVisita.status,
-        descripcion: nuevaVisita.descripcion // ✅ Incluir en respuesta
+        descripcion: nuevaVisita.descripcion
       },
       capacidadBloque: {
         ocupados: capacidad.personasActuales + cantidadPersonas,
@@ -128,12 +121,10 @@ const obtenerVisitas = async (req, res) => {
     const visitas = await Visita.find(filtro)
       .sort({ fechaVisita: 1, horaBloque: 1 });
 
-    // Calcular totales
     const totalPersonas = visitas
       .filter(v => v.status !== 'cancelada')
       .reduce((sum, visita) => sum + visita.cantidadPersonas, 0);
 
-    // ✅ Incluir descripcion en el mapeo
     res.status(200).json({
       total: visitas.length,
       totalPersonas,
@@ -144,7 +135,7 @@ const obtenerVisitas = async (req, res) => {
         fechaVisita: formatearFecha(v.fechaVisita),
         horaBloque: v.horaBloque,
         status: v.status,
-        descripcion: v.descripcion, // ✅ Incluir descripcion
+        descripcion: v.descripcion,
         createdAt: v.createdAt
       }))
     });
@@ -166,7 +157,6 @@ const obtenerVisitaPorId = async (req, res) => {
       return res.status(404).json({ msg: "Visita no encontrada" });
     }
 
-    // ✅ Incluir descripcion en la respuesta
     res.status(200).json({
       id: visita._id,
       institucion: visita.institucion,
@@ -175,7 +165,7 @@ const obtenerVisitaPorId = async (req, res) => {
       horaBloque: visita.horaBloque,
       bloqueId: visita.bloqueId,
       status: visita.status,
-      descripcion: visita.descripcion, // ✅ Incluir descripcion
+      descripcion: visita.descripcion,
       createdAt: visita.createdAt,
       updatedAt: visita.updatedAt
     });
@@ -235,7 +225,7 @@ const actualizarEstadoVisita = async (req, res) => {
 
     await visita.save();
 
-    // ✅ Incluir descripcion en la respuesta
+
     res.status(200).json({
       msg: `Visita marcada como ${status}`,
       visita: {
@@ -245,7 +235,7 @@ const actualizarEstadoVisita = async (req, res) => {
         fechaVisita: formatearFecha(visita.fechaVisita),
         horaBloque: visita.horaBloque,
         status: visita.status,
-        descripcion: visita.descripcion // ✅ Incluir descripcion
+        descripcion: visita.descripcion
       }
     });
   } catch (error) {
@@ -298,7 +288,7 @@ const consultarDisponibilidad = async (req, res) => {
 
     const fechaConsulta = new Date(fecha);
 
-    // Validar que sea día hábil
+    // Validar que sea día valido
     if (!esDiaHabil(fechaConsulta)) {
       return res.status(400).json({
         msg: `${obtenerNombreDia(fechaConsulta)} no es un día hábil`,
@@ -307,7 +297,7 @@ const consultarDisponibilidad = async (req, res) => {
       });
     }
 
-    // Obtener todas las visitas del día (excluyendo canceladas)
+    // Obtener todas las visitas del dia excluyendo las canceladas
     const visitasDelDia = await Visita.obtenerVisitasPorBloque(fechaConsulta);
 
     // Crear mapa de ocupación

@@ -29,7 +29,7 @@ import {
   validarCelular,
   validarPassword,
   validarHorasPasantia,
-  validarNombre // ← AGREGADO
+  validarNombre
 } from "../middleware/validacion.js";
 
 const router = Router();
@@ -100,14 +100,14 @@ router.put(
   cambiarPasswordAdministrador
 );
 
-// ==================== CRUD ADMINIS (Solo Administrador) ====================
+// ==================== CRUD ADMINIS ====================
 
 router.post(
   "/adminis",
   verificarToken,
   autorizarRoles("administrador"),
   validarCamposRequeridos(["nombre", "email", "password", "celular", "tipo"]),
-  validarNombre, // ← AGREGADO
+  validarNombre,
   validarEmail,
   validarCelular,
   validarPassword,
@@ -151,7 +151,7 @@ router.post(
   verificarToken,
   autorizarRoles("administrador", "admini"),
   validarCamposRequeridos(["nombre", "email", "facultad", "celular"]),
-  validarNombre, // ← AGREGADO
+  validarNombre,
   validarEmail,
   validarCelular,
   validarHorasPasantia,

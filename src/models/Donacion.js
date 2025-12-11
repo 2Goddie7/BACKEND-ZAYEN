@@ -2,7 +2,6 @@ import { Schema, model } from 'mongoose';
 import { CONFIG_MUSEO } from '../config/museo.config.js';
 
 const donacionSchema = new Schema({
-    // ==================== CAMPOS COMUNES ====================
     nombreDonante: {
         type: String,
         required: [true, 'El nombre del donante es requerido'],
@@ -33,8 +32,7 @@ const donacionSchema = new Schema({
         required: true,
         default: Date.now
     },
-    
-    // ==================== DONACIÓN ECONÓMICA ====================
+
     monto: {
         type: Number,
         min: [0.01, 'El monto debe ser mayor a 0'],
@@ -57,7 +55,7 @@ const donacionSchema = new Schema({
         default: null
     },
     
-    // ==================== DONACIÓN DE BIENES ====================
+
     descripcionBien: {
         type: String,
         trim: true,
@@ -84,7 +82,6 @@ const donacionSchema = new Schema({
         }
     },
     
-    // ==================== ESTADO ====================
     status: {
         type: String,
         enum: {
@@ -122,7 +119,7 @@ donacionSchema.index({ nombreDonante: 1, institucion: 1 });
 
 // Validación pre-save
 donacionSchema.pre('save', function(next) {
-    // Para donaciones de bienes, asegurar que monto sea 0 o null
+    // Para donaciones de bienes, asegurar que monto sea 0 o nulo
     if (this.tipoDonacion === 'bienes' && !this.monto) {
         this.monto = 0;
     }
@@ -184,7 +181,7 @@ donacionSchema.virtual('estadoFormateado').get(function() {
     return estados[this.status] || this.status;
 });
 
-// Incluir virtuals en JSON y Object
+// Incluir virtuals 
 donacionSchema.set('toJSON', { virtuals: true });
 donacionSchema.set('toObject', { virtuals: true });
 

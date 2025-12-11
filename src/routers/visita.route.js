@@ -21,13 +21,13 @@ const router = Router();
 
 // ==================== RUTAS PÚBLICAS ====================
 
-// Consultar disponibilidad (público)
+// Consultar disponibilidad
 router.get(
   "/disponibilidad",
   consultarDisponibilidad
 );
 
-// Sugerir horarios disponibles (público)
+// Sugerir horarios disponibles
 router.get(
   "/sugerir-horarios",
   sugerirHorariosDisponibles
@@ -35,7 +35,7 @@ router.get(
 
 // ==================== RUTAS PROTEGIDAS ====================
 
-// Crear visita (Admin, Admini, Pasante)
+// Crear visita
 router.post(
   "/",
   verificarToken,
@@ -70,7 +70,7 @@ router.get(
   obtenerVisitaPorId
 );
 
-// Actualizar estado de visita (realizada/cancelada)
+// Actualizar estado de visita
 router.patch(
   "/:id/estado",
   verificarToken,
@@ -79,7 +79,7 @@ router.patch(
   actualizarEstadoVisita
 );
 
-// Eliminar visita (solo Admin)
+// Eliminar visita (solo Administradores)
 router.delete(
   "/:id",
   verificarToken,

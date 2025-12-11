@@ -24,7 +24,6 @@ import {
 const router = Router();
 
 // ==================== WEBHOOK STRIPE ====================
-// IMPORTANTE: Debe estar ANTES de express.json() en server.js
 router.post(
   "/webhook",
   express.raw({ type: "application/json" }),
@@ -33,7 +32,7 @@ router.post(
 
 // ==================== RUTAS PÚBLICAS ====================
 
-// Crear donación económica (Usuario público)
+// Crear donación económica
 router.post(
   "/economica",
   validarCamposRequeridos(["nombreDonante", "institucion", "monto"]),
@@ -42,7 +41,7 @@ router.post(
   crearDonacionEconomica
 );
 
-// Crear donación de bienes (Usuario público)
+// Crear donación de bienes
 router.post(
   "/bienes",
   uploadGeneral.single("fotoBien"),
@@ -52,7 +51,7 @@ router.post(
   crearDonacionBienes
 );
 
-// Crear sesión de pago Stripe (Usuario público)
+// Crear sesión de pago Stripe
 router.post(
   "/pago",
   validarCamposRequeridos(["donacionId"]),
@@ -67,7 +66,7 @@ router.get(
 
 // ==================== RUTAS PROTEGIDAS ====================
 
-// Actualizar estado de donación de bienes (Admin/Admini)
+// Actualizar estado de donación de bienes
 router.patch(
   "/:id/estado-bien",
   verificarToken,

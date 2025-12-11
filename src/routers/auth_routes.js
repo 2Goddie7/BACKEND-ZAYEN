@@ -4,7 +4,7 @@ import { generarToken } from "../middleware/jwt.js";
 
 const router = Router();
 
-// ==================== AUTENTICACIÓN CON GOOGLE (Pasantes) ====================
+// ==================== AUTENTICACIÓN CON GOOGLE PARA PASANTES ====================
 
 // Ruta para iniciar autenticación con Google
 router.get(
@@ -40,7 +40,7 @@ router.get(
   }
 );
 
-// Ruta alternativa para respuesta JSON (útil para testing)
+// Ruta alternativa para respuesta JSON
 router.get(
   "/google/callback/json",
   passport.authenticate("google", { session: false, failureRedirect: "/login" }),

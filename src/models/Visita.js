@@ -32,7 +32,7 @@ const visitaSchema = new Schema({
     bloqueId: {
         type: String,
         required: true,
-        index: true // Para consultas rápidas
+        index: true
     },
     status: {
         type: String,
@@ -42,7 +42,6 @@ const visitaSchema = new Schema({
         },
         default: 'pendiente'
     },
-    // ✅ NUEVO CAMPO: Descripción de la visita
     descripcion: {
         type: String,
         default: '',
@@ -54,13 +53,13 @@ const visitaSchema = new Schema({
     collection: 'visita'
 });
 
-// Índice compuesto para búsquedas por bloque
+// Indice para busquedas por bloque
 visitaSchema.index({ bloqueId: 1, status: 1 });
 
-// Índice para búsquedas por fecha
+// Indice para busquedas por fecha
 visitaSchema.index({ fechaVisita: 1, horaBloque: 1 });
 
-// Middleware pre-save para establecer descripción default
+// Middleware para en caso de no poner descripción establecer una por default
 visitaSchema.pre('save', function(next) {
     if (this.status === 'realizada' && !this.descripcion) {
         this.descripcion = CONFIG_MUSEO.VISITAS.DESCRIPCION_DEFAULT_REALIZADA;
@@ -72,7 +71,7 @@ visitaSchema.pre('save', function(next) {
 visitaSchema.statics.validarCapacidadBloque = async function(bloqueId, nuevasPersonas, visitaIdExcluir = null) {
     const query = { bloqueId, status: { $ne: 'cancelada' } };
     
-    // Excluir la visita actual si estamos actualizando
+    // excluir la visita actual si la estamos actualizando
     if (visitaIdExcluir) {
         query._id = { $ne: visitaIdExcluir };
     }
@@ -91,7 +90,7 @@ visitaSchema.statics.validarCapacidadBloque = async function(bloqueId, nuevasPer
     };
 };
 
-// Método para obtener visitas agrupadas por bloque
+// Método para obtener las visitas agrupadas por bloque
 visitaSchema.statics.obtenerVisitasPorBloque = async function(fechaVisita) {
     const inicioDia = new Date(fechaVisita);
     inicioDia.setHours(0, 0, 0, 0);
@@ -114,7 +113,7 @@ visitaSchema.statics.obtenerVisitasPorBloque = async function(fechaVisita) {
                     $push: { 
                         institucion: '$institucion', 
                         cantidadPersonas: '$cantidadPersonas',
-                        descripcion: '$descripcion' // ✅ Incluir descripción
+                        descripcion: '$descripcion'
                     } 
                 }
             }

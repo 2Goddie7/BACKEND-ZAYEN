@@ -1,38 +1,36 @@
-// Configuración centralizada del Museo Gustavo Orcés
-
 export const CONFIG_MUSEO = {
-  // ==================== VISITAS ====================
+  //  ****************** VISITAS ******************
   VISITAS: {
-    // Capacidad - ACTUALIZADO
-    CAPACIDAD_MAXIMA_POR_BLOQUE: 40, // ✅ Cambiado de 25 a 40
-    CANTIDAD_MINIMA_GRUPO: 10, // ✅ Cambiado de 2 a 10
-    CANTIDAD_MAXIMA_GRUPO: 40, // ✅ Cambiado de 25 a 40
+    // Capacidad
+    CAPACIDAD_MAXIMA_POR_BLOQUE: 40,
+    CANTIDAD_MINIMA_GRUPO: 10,
+    CANTIDAD_MAXIMA_GRUPO: 40,
     
-    // Horarios - ACTUALIZADO
+    // Horarios
     HORA_APERTURA: "08:00",
-    HORA_CIERRE: "16:00", // ✅ Cambiado de 16:30 a 16:00
+    HORA_CIERRE: "16:00",
     DURACION_BLOQUE_MINUTOS: 30,
     
-    // Horario de almuerzo - NUEVO
-    HORA_INICIO_ALMUERZO: "13:00", // ✅ NUEVO
-    HORA_FIN_ALMUERZO: "13:59", // ✅ NUEVO
+    // hora de almuerzo
+    HORA_INICIO_ALMUERZO: "13:00",
+    HORA_FIN_ALMUERZO: "13:59",
     
-    // Días de operación (1=Lunes, 5=Viernes)
+    // Dias de operación (1=lunes - 5=viernes)
     DIAS_OPERACION: [1, 2, 3, 4, 5],
     
-    // Anticipación
+    // Anticipacion
     ANTICIPACION_MINIMA_DIAS: 1,
-    ANTICIPACION_MAXIMA_DIAS: null, // Sin límite
+    ANTICIPACION_MAXIMA_DIAS: null,
     
-    // Mensajes
-    NOTA_FERIADOS: "⚠️ Recuerde no registrar visitas en días feriados nacionales",
+    // Mensajes para que no se registren en feriadao
+    NOTA_FERIADOS: "Recuerde no registrar visitas en días feriados nacionales",
     
     // Estados
     ESTADOS: ['pendiente', 'realizada', 'cancelada'],
     DESCRIPCION_DEFAULT_REALIZADA: 'sin novedad'
   },
   
-  // ==================== DONACIONES ====================
+  // ****************** DONACIONES ******************
   DONACIONES: {
     TIPOS: ['economica', 'bienes'],
     ESTADOS_ECONOMICA: ['pendiente', 'completada', 'fallida'],
@@ -42,7 +40,7 @@ export const CONFIG_MUSEO = {
     DESCRIPCION_DEFAULT: 'ninguna'
   },
   
-  // ==================== VALIDACIONES ====================
+  // ****************** VALIDACIONES ******************
   VALIDACIONES: {
     NOMBRE_MIN_LENGTH: 3,
     NOMBRE_MAX_LENGTH: 100,
@@ -50,7 +48,7 @@ export const CONFIG_MUSEO = {
   }
 };
 
-// Generar bloques horarios del día - ACTUALIZADO PARA OMITIR ALMUERZO
+// Generar bloques horarios del día
 export const generarBloquesHorarios = () => {
   const bloques = [];
   const [horaInicio] = CONFIG_MUSEO.VISITAS.HORA_APERTURA.split(':').map(Number);
@@ -67,10 +65,8 @@ export const generarBloquesHorarios = () => {
   let minActual = 0;
   
   while (horaActual < horaCierre || (horaActual === horaCierre && minActual <= minCierre)) {
-    // Calcular minutos totales desde medianoche
     const minutosActuales = (horaActual * 60) + minActual;
     
-    // ✅ Omitir bloques durante el horario de almuerzo
     const esHorarioAlmuerzo = minutosActuales >= minutosInicioAlmuerzo && minutosActuales <= minutosFinAlmuerzo;
     
     if (!esHorarioAlmuerzo) {

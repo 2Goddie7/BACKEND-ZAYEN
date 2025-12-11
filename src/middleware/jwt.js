@@ -10,7 +10,7 @@ export const generarToken = (id, rol) => {
   );
 };
 
-// Verificar token y cargar usuario completo desde BD
+// Verificar token y cargar usuario completo desde la base de datos
 export const verificarToken = async (req, res, next) => {
   const { authorization } = req.headers;
   
@@ -22,7 +22,7 @@ export const verificarToken = async (req, res, next) => {
     const token = authorization.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "secreto");
 
-    // Cargar el usuario completo según su rol
+    // Cargar el usuario completo por su rol
     let usuario;
     if (decoded.rol === "administrador" || decoded.rol === "admini") {
       usuario = await Administrador.findById(decoded.id).select("-password");
@@ -38,7 +38,7 @@ export const verificarToken = async (req, res, next) => {
       return res.status(403).json({ msg: "Usuario inactivo" });
     }
 
-    // Guardar usuario completo en req.user
+    // Guardar usuario completo 
     req.user = usuario;
     next();
   } catch (error) {

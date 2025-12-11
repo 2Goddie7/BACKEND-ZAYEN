@@ -44,7 +44,7 @@ export const validarCedula = (req, res, next) => {
     const cedulaRegex = /^\d{10}$/;
     if (!cedulaRegex.test(cedula)) {
       return res.status(400).json({ 
-        msg: "Formato de cédula inválido. Debe contener 10 dígitos" 
+        msg: "La cédula debe contener 10 dígitos" 
       });
     }
   }
@@ -52,7 +52,7 @@ export const validarCedula = (req, res, next) => {
   next();
 };
 
-// Validar formato de celular ecuatoriano (10 dígitos, empieza con 09)
+// Validar formato de celular
 export const validarCelular = (req, res, next) => {
   const { celular } = req.body;
   
@@ -60,7 +60,7 @@ export const validarCelular = (req, res, next) => {
     const celularRegex = /^09\d{8}$/;
     if (!celularRegex.test(celular)) {
       return res.status(400).json({ 
-        msg: "Formato de celular inválido. Debe ser un número ecuatoriano válido (09XXXXXXXX)" 
+        msg: "Ingresa un número de celular válido (Ej. 0978654321)" 
       });
     }
   }
@@ -76,7 +76,7 @@ export const validarMonto = (req, res, next) => {
     const montoNum = parseFloat(monto);
     if (isNaN(montoNum) || montoNum <= 0) {
       return res.status(400).json({ 
-        msg: "El monto debe ser un número positivo" 
+        msg: "El monto debe ser un número positivo"
       });
     }
   }
@@ -118,7 +118,7 @@ export const validarPassword = (req, res, next) => {
 
 // ==================== NUEVAS VALIDACIONES ====================
 
-// Validar nombre (mínimo 3 caracteres, solo letras y espacios)
+// Validar nombre
 export const validarNombre = (req, res, next) => {
   const { nombre, nombreDonante } = req.body;
   const nombreValidar = nombre || nombreDonante;
