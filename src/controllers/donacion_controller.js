@@ -225,7 +225,7 @@ const crearDonacionBienes = async (req, res) => {
       estadoBien,
       fotoBien: req.file.path,
       descripcion: descripcion || CONFIG_MUSEO.DONACIONES.DESCRIPCION_DEFAULT,
-      monto: 0,
+      monto: 1,
       status: 'pendiente'
     });
 
