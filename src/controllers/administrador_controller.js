@@ -17,7 +17,7 @@ const loginAdministrador = async (req, res) => {
 
     const admin = await Administrador.findOne({ email });
     if (!admin) {
-      return res.status(404).json({ msg: "El correo no está registrado" });
+      return res.status(404).json({ msg: "El correo ingresado no está registrado" });
     }
 
     if (!admin.confirmEmail) {
@@ -78,7 +78,7 @@ const confirmarCuentaAdmini = async (req, res) => {
     const admin = await Administrador.findOne({ token });
 
     if (!admin) {
-      return res.status(400).json({ msg: "Token inválido o cuenta ya confirmada" });
+      return res.status(400).json({ msg: "Token de confirmción inválido o cuenta ya confirmada" });
     }
 
     admin.confirmEmail = true;
@@ -169,7 +169,7 @@ const actualizarFotoPerfilAdministrador = async (req, res) => {
     }
 
     if (!req.file) {
-      return res.status(400).json({ msg: "No se subió ninguna imagen :/" });
+      return res.status(400).json({ msg: "No se subió ninguna imagen 😥" });
     }
 
     admin.fotoPerfil = req.file.path;
@@ -192,7 +192,7 @@ const cambiarPasswordAdministrador = async (req, res) => {
     const { actualPassword, nuevaPassword } = req.body;
 
     if (!actualPassword || !nuevaPassword) {
-      return res.status(400).json({ msg: "Todos los campos son obligatorios" });
+      return res.status(400).json({ msg: "No puedes dejar campos vacíos, ingresa tu contraseña actual y la contraseña nueva" });
     }
 
     if (nuevaPassword.length < 8) {
@@ -226,7 +226,7 @@ const solicitarRecuperacionPassword = async (req, res) => {
 
   try {
     if (!email) {
-      return res.status(400).json({ msg: "El email es requerido" });
+      return res.status(400).json({ msg: "El correo electronico es requerido" });
     }
 
     const admin = await Administrador.findOne({ email });
@@ -240,7 +240,7 @@ const solicitarRecuperacionPassword = async (req, res) => {
 
     await sendMailToRecoveryPassword(admin.email, token);
 
-    res.status(200).json({ msg: "Se ha enviado un correo para recuperar tu contraseña" });
+    res.status(200).json({ msg: "Se ha enviado un correo para recuperar tu contraseña, si no recibes el correo, revisa tu bandeja de spam" });
   } catch (error) {
     res.status(500).json({ msg: "Error al solicitar recuperación", error: error.message });
   }
@@ -254,10 +254,10 @@ const validarTokenRecuperacion = async (req, res) => {
     const admin = await Administrador.findOne({ token });
     
     if (!admin) {
-      return res.status(404).json({ msg: "Token inválido o expirado" });
+      return res.status(404).json({ msg: "Token para recuperar contraseña inválido o expirado" });
     }
-    
-    res.status(200).json({ msg: "Token válido" });
+
+    res.status(200).json({ msg: "Token para recuperar contraseña válido", token });
   } catch (error) {
     res.status(500).json({ msg: "Error del servidor", error: error.message });
   }
@@ -270,7 +270,7 @@ const recuperarPassword = async (req, res) => {
 
   try {
     if (!nuevaPassword) {
-      return res.status(400).json({ msg: "La nueva contraseña es requerida" });
+      return res.status(400).json({ msg: "¡Debes ingresar tu nueva contraseña!" });
     }
 
     if (nuevaPassword.length < 8) {
@@ -279,7 +279,7 @@ const recuperarPassword = async (req, res) => {
 
     const admin = await Administrador.findOne({ token });
     if (!admin) {
-      return res.status(404).json({ msg: "Token no válido o expirado" });
+      return res.status(404).json({ msg: "Token para reestablecer contraseña inválido o expirado" });
     }
 
     admin.password = await admin.encrypPassword(nuevaPassword);
@@ -320,7 +320,7 @@ const crearAdmin = async (req, res) => {
     // Verificar si el email ya existe
     const emailExiste = await Administrador.findOne({ email });
     if (emailExiste) {
-      return res.status(400).json({ msg: "El correo ya se encuentra registrado" });
+      return res.status(400).json({ msg: "El correo ingresado ya se encuentra registrado" });
     }
 
     // Crear nuevo admini
@@ -543,7 +543,7 @@ const confirmarPasante = async (req, res) => {
     const pasante = await Pasante.findOne({ token });
 
     if (!pasante) {
-      return res.status(404).json({ msg: "Token no válido o expirado" });
+      return res.status(404).json({ msg: "Token de confirmación inválido o expirado" });
     }
 
     pasante.confirmEmail = true;

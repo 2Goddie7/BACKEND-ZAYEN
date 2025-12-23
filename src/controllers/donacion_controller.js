@@ -38,7 +38,7 @@ const crearDonacionEconomica = async (req, res) => {
     await nuevaDonacion.save();
 
     res.status(201).json({
-      msg: "Donación económica registrada. Procede al pago",
+      msg: "Donante económico registrado. Ahora proceda con el pago",
       donacion: {
         id: nuevaDonacion._id,
         nombreDonante: nuevaDonacion.nombreDonante,
@@ -166,7 +166,7 @@ const verificarEstadoPago = async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (!session) {
-      return res.status(404).json({ msg: "Sesión no encontrada" });
+      return res.status(404).json({ msg: "Sesión de pago no encontrada" });
     }
 
     const donacion = await Donacion.findOne({ stripePaymentId: sessionId });
@@ -207,7 +207,7 @@ const crearDonacionBienes = async (req, res) => {
 
     // Validar que se haya subido una foto
     if (!req.file) {
-      return res.status(400).json({ msg: "La foto del bien es requerida" });
+      return res.status(400).json({ msg: "La foto del bien es requerida!" });
     }
 
     // Validar estado del bien
@@ -263,7 +263,7 @@ const actualizarEstadoDonacionBienes = async (req, res) => {
     // Validar que el status sea válido para donaciones de bienes
     if (!CONFIG_MUSEO.DONACIONES.ESTADOS_BIENES.includes(status)) {
       return res.status(400).json({ 
-        msg: `Estado inválido para donaciones de bienes. Estados permitidos: ${CONFIG_MUSEO.DONACIONES.ESTADOS_BIENES.join(', ')}` 
+        msg: `Estado inválido para donaciones de bienes, los estados permitidos son: ${CONFIG_MUSEO.DONACIONES.ESTADOS_BIENES.join(', ')}` 
       });
     }
 

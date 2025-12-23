@@ -207,7 +207,7 @@ const actualizarEstadoVisita = async (req, res) => {
     // Validar que se proporcione descripción para visitas canceladas
     if (status === 'cancelada' && (!descripcion || descripcion.trim() === '')) {
       return res.status(400).json({ 
-        msg: "Debe proporcionar el motivo de la cancelación en el campo descripción" 
+        msg: "Agregue en la descripción el motivo de la cancelación" 
       });
     }
 
@@ -281,7 +281,7 @@ const consultarDisponibilidad = async (req, res) => {
 
     if (!fecha) {
       return res.status(400).json({ 
-        msg: "La fecha es requerida",
+        msg: "La fecha es requerida (En la url) ",
         formato: "YYYY-MM-DD"
       });
     }

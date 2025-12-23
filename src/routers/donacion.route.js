@@ -62,7 +62,7 @@ router.post(
 router.get(
   "/pago/:sessionId",
   verificarEstadoPago
-);
+); //pendiente 
 
 // ==================== RUTAS PROTEGIDAS ====================
 

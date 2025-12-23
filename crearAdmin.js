@@ -18,17 +18,18 @@ async function crearAdministrador() {
     console.log('Conectado a MongoDB!');
 
     const admin = new Administrador({
-      nombre: 'Diego Mullo',
-      email: 'diego.mullo@epn.edu.ec',
+      nombre: 'Administrador Principal Prueba',
+      email: 'admin.prueba@museoprueba.com',
       rol: 'administrador',
       celular: '0999999998',
+      confirmEmail: true,
     });
   
-    admin.password = await admin.encrypPassword('123456789');
+    admin.password = await admin.encrypPassword('PruebaPassword123');
     admin.token = admin.crearToken();
     await admin.save();
     
-    try {
+    /*try {
       await sendMailToRegister(admin.email, admin.token);
       console.log('Administrador creado exitosamente');
       console.log('Revisa tu correo enviado a:', admin.email," para confirmar y activar tu cuenta.");
@@ -36,7 +37,7 @@ async function crearAdministrador() {
       console.warn('Administrador creado, pero hubo un error al enviar el correo:');
       console.warn(emailError.message);
     }
-
+*/
     await mongoose.disconnect();
     console.log('Desconectado de MongoDB');
   } catch (error) {

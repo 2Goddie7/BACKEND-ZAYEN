@@ -6,11 +6,11 @@ import { generarToken } from "../middleware/jwt.js";
 // Login con Google
 const loginPasanteGoogle = async (req, res) => {
   try {
-    // Esta funcion se llamada después del callback de Google
+    // Esta funcion se llamada despues del callback de Google
     const pasante = req.user;
 
     if (!pasante) {
-      return res.status(403).json({ msg: "Correo no autorizado" });
+      return res.status(403).json({ msg: "El correo con el que intentas iniciar sesión no está autorizado o no se encuentra registrado" });
     }
 
     const token = generarToken(pasante._id, "pasante");
@@ -90,7 +90,7 @@ const actualizarFotoPerfilPasante = async (req, res) => {
     const pasante = req.user;
 
     if (!req.file) {
-      return res.status(400).json({ msg: "No se subió ninguna imagen" });
+      return res.status(400).json({ msg: "No se subió ninguna imagen 😥" });
     }
 
     pasante.fotoPerfil = req.file.path;
